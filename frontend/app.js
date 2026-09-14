@@ -1,4 +1,8 @@
-const API_BASE = 'http://127.0.0.1:8000';
+const DEFAULT_LOCAL_API_BASE = 'http://127.0.0.1:8000';
+const API_BASE = window.__DWTS_API_BASE__ ||
+  (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1'
+    ? DEFAULT_LOCAL_API_BASE
+    : window.location.origin);
 const ADMIN_KEY = 'dwts-admin-dev-key';
 
 const state = {

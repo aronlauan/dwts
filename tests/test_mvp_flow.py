@@ -1,3 +1,5 @@
+import importlib
+import os
 import unittest
 from uuid import uuid4
 
@@ -5,6 +7,11 @@ from fastapi.testclient import TestClient
 
 from app.config import ADMIN_PASSWORD, ADMIN_USERNAME
 from app.main import app
+
+
+def reload_config_module():
+    import app.config as config_module
+    return importlib.reload(config_module)
 
 
 class DWTSMVPFlowTests(unittest.TestCase):
@@ -96,6 +103,19 @@ class DWTSMVPFlowTests(unittest.TestCase):
         self.assertGreater(len(leaderboard), 0)
         self.assertEqual(leaderboard[0]["player_name"], player_name)
         self.assertGreaterEqual(leaderboard[0]["points"], 0)
+
+    def test_database_url_override_uses_postgres(self):
+        original_url = os.environ.get("DATABASE_URL")
+        try:
+            os.environ["DATABASE_URL"] = "postgresql://user:pass@host:5432/dwts"
+            config_module = reload_config_module()
+            self.assertEqual(config_module.SQLALCHEMY_DATABASE_URL, "postgresql://user:pass@host:5432/dwts")
+        finally:
+            if original_url is None:
+                os.environ.pop("DATABASE_URL", None)
+            else:
+                os.environ["DATABASE_URL"] = original_url
+            reload_config_module()
 
 
 if __name__ == "__main__":

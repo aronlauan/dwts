@@ -5,15 +5,21 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 DATA_DIR = BASE_DIR / "data"
 CAST_DATA_PATH = DATA_DIR / "cast.json"
 
-raw_db_path = os.getenv("DWTS_DB_PATH")
-if raw_db_path:
-    DB_PATH = Path(raw_db_path).expanduser()
-    if not DB_PATH.is_absolute():
-        DB_PATH = (BASE_DIR / DB_PATH).resolve()
-else:
-    DB_PATH = BASE_DIR / "dwts.db"
+DATABASE_URL = os.getenv("DATABASE_URL")
 
-DB_PATH.parent.mkdir(parents=True, exist_ok=True)
+if DATABASE_URL:
+    SQLALCHEMY_DATABASE_URL = DATABASE_URL
+else:
+    raw_db_path = os.getenv("DWTS_DB_PATH")
+    if raw_db_path:
+        DB_PATH = Path(raw_db_path).expanduser()
+        if not DB_PATH.is_absolute():
+            DB_PATH = (BASE_DIR / DB_PATH).resolve()
+    else:
+        DB_PATH = BASE_DIR / "dwts.db"
+
+    DB_PATH.parent.mkdir(parents=True, exist_ok=True)
+    SQLALCHEMY_DATABASE_URL = f"sqlite:///{DB_PATH}"
 
 front_dir = os.getenv("DWTS_FRONTEND_DIR")
 if front_dir:
@@ -23,7 +29,6 @@ if front_dir:
 else:
     FRONTEND_DIR = BASE_DIR / "frontend"
 
-SQLALCHEMY_DATABASE_URL = f"sqlite:///{DB_PATH}"
 ADMIN_USERNAME = os.getenv("DWTS_ADMIN_USERNAME", "emma")
 ADMIN_PASSWORD = os.getenv("DWTS_ADMIN_PASSWORD", "admin")
 ADMIN_KEY = os.getenv("DWTS_ADMIN_KEY", "dwts-admin-dev-key")
