@@ -1,0 +1,102 @@
+import unittest
+from uuid import uuid4
+
+from fastapi.testclient import TestClient
+
+from app.config import ADMIN_PASSWORD, ADMIN_USERNAME
+from app.main import app
+
+
+class DWTSMVPFlowTests(unittest.TestCase):
+    def setUp(self):
+        self.client = TestClient(app)
+
+    def test_full_season_flow(self):
+        season_name = f"DWTS-Test-{uuid4().hex[:8]}"
+        season_response = self.client.post("/seasons/bootstrap", json={"name": season_name})
+        self.assertEqual(season_response.status_code, 200)
+        season = season_response.json()
+        self.assertIn("id", season)
+
+        player_name = f"Aron-{uuid4().hex[:8]}"
+
+        admin_login_response = self.client.post(
+            "/admin/login",
+            json={"username": ADMIN_USERNAME, "password": ADMIN_PASSWORD},
+        )
+        self.assertEqual(admin_login_response.status_code, 200)
+
+        pairings_response = self.client.get(f"/seasons/{season['id']}/pairings")
+        self.assertEqual(pairings_response.status_code, 200)
+        pairings = pairings_response.json()
+        self.assertGreater(len(pairings), 0)
+
+        predictions = [entry["star_name"] for entry in pairings]
+        predictions = predictions[:]
+        predictions.reverse()
+
+        pick_response = self.client.post(
+            "/pick-sheets",
+            json={
+                "name": player_name,
+                "season_id": season["id"],
+                "predictions": predictions,
+            },
+        )
+        self.assertEqual(pick_response.status_code, 200)
+
+        selection_view_response = self.client.get(f"/seasons/{season['id']}/pick-sheets")
+        self.assertEqual(selection_view_response.status_code, 200)
+        selections = selection_view_response.json()
+        self.assertGreater(len(selections), 0)
+        self.assertEqual(selections[0]["player_name"], player_name)
+        self.assertEqual(len(selections[0]["predictions"]), len(pairings))
+
+        duplicate_pick_response = self.client.post(
+            "/pick-sheets",
+            json={
+                "name": player_name,
+                "season_id": season["id"],
+                "predictions": predictions,
+            },
+        )
+        self.assertEqual(duplicate_pick_response.status_code, 400)
+
+        first_elim = pairings[0]["star_name"]
+        unauthorized_response = self.client.post(
+            "/eliminations",
+            json={"season_id": season["id"], "star_name": first_elim},
+        )
+        self.assertEqual(unauthorized_response.status_code, 401)
+
+        authorized_response = self.client.post(
+            "/eliminations",
+            json={"season_id": season["id"], "star_name": first_elim},
+            headers={"X-Admin-Key": "dwts-admin-dev-key"},
+        )
+        self.assertEqual(authorized_response.status_code, 200)
+
+        host_message_response = self.client.get("/site-message")
+        self.assertEqual(host_message_response.status_code, 200)
+        initial_message = host_message_response.json()["message"]
+        self.assertIsInstance(initial_message, str)
+
+        updated_message = "This week’s picks are live — keep it glam and keep it bold."
+        update_response = self.client.post(
+            "/site-message",
+            json={"message": updated_message},
+            headers={"X-Admin-Key": "dwts-admin-dev-key"},
+        )
+        self.assertEqual(update_response.status_code, 200)
+        self.assertEqual(update_response.json()["message"], updated_message)
+
+        leaderboard_response = self.client.get(f"/leaderboard/{season['id']}")
+        self.assertEqual(leaderboard_response.status_code, 200)
+        leaderboard = leaderboard_response.json()
+        self.assertGreater(len(leaderboard), 0)
+        self.assertEqual(leaderboard[0]["player_name"], player_name)
+        self.assertGreaterEqual(leaderboard[0]["points"], 0)
+
+
+if __name__ == "__main__":
+    unittest.main()

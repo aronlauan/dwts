@@ -75,4 +75,3 @@ This keeps the app simple while making it easy to securely host the admin login 
 - Do not keep admin credentials in the repo
 - Keep the database in a writable mounted directory on deploy
 - A custom domain can be added later if you want a cleaner public URL
-

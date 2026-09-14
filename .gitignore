@@ -1,3 +1,4 @@
+<<<<<<< HEAD
 # Byte-compiled / optimized / DLL files
 __pycache__/
 *.py[codz]
@@ -221,3 +222,28 @@ __marimo__/
 
 # Streamlit
 .streamlit/secrets.toml
+=======
+# Python
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.venv/
+*.egg-info/
+
+# OS/editor
+.DS_Store
+.vscode/
+
+# App data
+.dwts/
+*.db
+*.sqlite3
+.env
+.env.*
+
+# Build artifacts
+coverage/
+htmlcov/
+.dist/
+.build/
+>>>>>>> recovered-pre-push

@@ -1,0 +1,234 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>DWTS Picks League</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
+    <link rel="stylesheet" href="styles.css" />
+  </head>
+  <body>
+    <div class="page-shell">
+      <header class="topbar">
+        <div>
+          <p class="eyebrow">Season 2026</p>
+          <h1>DWTS 2026 Picks 💃🏼</h1>
+        </div>
+        <nav class="nav">
+          <a href="#leaderboard">Leaderboard</a>
+          <a href="#pick-sheet">Pick Sheet</a>
+          <a href="#admin">Admin</a>
+        </nav>
+      </header>
+
+      <section class="host-message card">
+        <div class="host-message-header">
+          <div class="host-avatar" aria-hidden="true">👱🏼‍♀️</div>
+          <div>
+            <p class="eyebrow accent">Message from your Host</p>
+            <h3>From the host</h3>
+          </div>
+        </div>
+        <p id="host-message-text" class="host-message-copy">Loading your host message...</p>
+
+        <form id="host-message-form" class="host-message-form hidden">
+          <label>
+            Update the message
+            <textarea id="host-message-input" rows="3" placeholder="Write a message for the league..."></textarea>
+          </label>
+          <button class="primary-btn" type="submit">Save message</button>
+        </form>
+      </section>
+
+      <main class="main-grid">
+        <section class="hero card">
+          <div class="hero-copy-block">
+            <p class="eyebrow accent">League pulse</p>
+            <h2>Who will win?</h2>
+            <p class="hero-copy">
+                It's that time of year again friends. Who will take home the 2026 mirrorball 
+                and who will be forced to chasse away? Submit your picks below. 
+                Season 35 - let's ride. 
+            </p>
+
+            <div class="countdown-ticker" aria-live="polite">
+              <div class="countdown-header">
+                <span class="countdown-label">Selection deadline</span>
+                <span class="countdown-badge">EST</span>
+              </div>
+              <div class="countdown-visual">
+                <div class="analog-clock" aria-hidden="true">
+                  <div class="clock-ring">
+                    <div class="clock-center">
+                      <div id="countdown-days" class="clock-value">00</div>
+                      <span>days</span>
+                    </div>
+                  </div>
+                </div>
+                <div class="countdown-readout-wrap">
+                  <div class="readout-row">
+                    <div class="readout-pill">
+                      <span>Hours</span>
+                      <strong id="countdown-hours">00</strong>
+                    </div>
+                    <div class="readout-pill">
+                      <span>Minutes</span>
+                      <strong id="countdown-minutes">00</strong>
+                    </div>
+                    <div class="readout-pill">
+                      <span>Seconds</span>
+                      <strong id="countdown-seconds">00</strong>
+                    </div>
+                  </div>
+                  <div id="countdown-text" class="countdown-text">Loading deadline...</div>
+                </div>
+              </div>
+            </div>
+
+            <div class="hero-metrics">
+              <div>
+                <span>Current leader</span>
+                <strong id="current-leader">Loading...</strong>
+              </div>
+              <div>
+                <span>Season</span>
+                <strong id="season-name">Loading...</strong>
+              </div>
+              <div>
+                <span>Participants</span>
+                <strong id="participant-count">0</strong>
+              </div>
+            </div>
+          </div>
+          <div class="hero-visual">
+            <img src="dwts.webp" alt="DWTS promotional image" />
+          </div>
+        </section>
+
+        <section id="leaderboard" class="card leaderboard">
+          <div class="section-title-row">
+            <div>
+              <p class="eyebrow">Standings</p>
+              <h3>Leaderboard</h3>
+            </div>
+            <button id="refresh-leaderboard" class="secondary-btn" type="button">Refresh</button>
+          </div>
+
+          <table>
+            <thead>
+              <tr>
+                <th>Rank</th>
+                <th>Player</th>
+                <th>Points</th>
+                <th>Exact</th>
+              </tr>
+            </thead>
+            <tbody id="leaderboard-body"></tbody>
+          </table>
+        </section>
+
+        <aside class="card mini-panel">
+          <p class="eyebrow">Join the league</p>
+          <h3>Submit your picks</h3>
+          <div class="status-text">Use the name you want displayed on the leaderboard.</div>
+        </aside>
+
+        <section id="pick-sheet" class="card picks-card">
+          <div class="section-title-row">
+            <div>
+              <p class="eyebrow">Your sheet</p>
+              <h3>Elimination Order</h3>
+            </div>
+          </div>
+
+          <form id="pick-form" class="stacked-form">
+            <label>
+              Name
+              <input id="player-name-input" type="text" placeholder="Enter your name" />
+            </label>
+
+            <div class="drag-layout">
+              <div class="drag-panel">
+                <div class="drag-header">
+                  <span>Available pairings</span>
+                </div>
+                <div id="pairing-pool" class="drag-pool" aria-label="Available pairings"></div>
+              </div>
+
+              <div class="drag-panel">
+                <div class="drag-header">
+                  <span>Winner → first out</span>
+                </div>
+                <div id="ranked-pairs" class="ranked-pairs" aria-label="Predicted elimination ranking"></div>
+              </div>
+            </div>
+
+            <button class="primary-btn" type="submit">Submit picks</button>
+          </form>
+          <div id="pick-status" class="status-text"></div>
+        </section>
+
+        <section class="card feed-card">
+          <div class="section-title-row">
+            <div>
+              <p class="eyebrow">League picks</p>
+              <h3>View selections</h3>
+            </div>
+          </div>
+
+          <form id="selection-viewer-form" class="stacked-form compact-form">
+            <label>
+              Pick a name
+              <select id="selection-name-select">
+                <option value="">Choose a participant</option>
+              </select>
+            </label>
+          </form>
+          <div id="selection-viewer" class="selection-viewer"></div>
+        </section>
+
+        <section id="admin" class="card feed-card admin-panel">
+          <div class="section-title-row">
+            <div>
+              <p class="eyebrow">Admin</p>
+              <h3>Secure controls</h3>
+            </div>
+          </div>
+
+          <form id="admin-login-form" class="stacked-form compact-form">
+            <label>
+              Admin username
+              <input id="admin-username-input" type="text" placeholder="admin" />
+            </label>
+            <label>
+              Admin password
+              <input id="admin-password-input" type="password" placeholder="Password" />
+            </label>
+            <button class="secondary-btn" type="submit">Admin login</button>
+          </form>
+          <div id="admin-login-status" class="status-text"></div>
+
+          <div id="admin-controls" class="hidden">
+            <form id="elimination-form" class="stacked-form">
+              <label>
+                Season ID
+                <input id="season-id-input" type="number" min="1" placeholder="Season ID" />
+              </label>
+              <label>
+                Eliminated pairing
+                <select id="elimination-select"></select>
+              </label>
+              <button class="primary-btn" type="submit">Save elimination</button>
+            </form>
+            <div id="elimination-status" class="status-text"></div>
+          </div>
+        </section>
+
+      </main>
+    </div>
+
+    <script src="app.js"></script>
+  </body>
+</html>
