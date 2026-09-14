@@ -46,13 +46,32 @@ The admin credentials are controlled by environment variables:
 
 Set these in your shell or `.env` file before running the app.
 
-## Production deployment ideas
+## Recommended production deployment
 
-This app is intentionally small and simple enough for deployment to:
+For a small group of friends, the best fit is a single Render web service with SQLite in a persistent volume.
 
-- Render
-- Fly.io
-- Railway
-- a cheap VPS behind a reverse proxy
+### Suggested Render setup
 
-For a small friend group, a single app instance with SQLite is usually enough.
+- Service type: Web Service
+- Build command: `pip install -r requirements.txt`
+- Start command: `uvicorn app.main:app --host 0.0.0.0 --port $PORT`
+- Environment variables:
+  - `DWTS_ADMIN_USERNAME`
+  - `DWTS_ADMIN_PASSWORD`
+  - `DWTS_ADMIN_KEY`
+  - `DWTS_DB_PATH=/data/dwts.db`
+
+This keeps the app simple while making it easy to securely host the admin login and public picks page.
+
+### Why this deployment works well
+
+- One app instance for the frontend and API
+- Minimal ops burden
+- Secret management via env vars
+- SQLite remains practical for a 10–20 user friend league
+
+## Production notes
+
+- Do not keep admin credentials in the repo
+- Keep the database in a writable mounted directory on deploy
+- A custom domain can be added later if you want a cleaner public URL
