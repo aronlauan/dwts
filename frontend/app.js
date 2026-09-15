@@ -252,7 +252,7 @@ function renderRankingList() {
     if (!placedName) {
       const empty = document.createElement('div');
       empty.className = 'rank-slot-empty';
-      empty.textContent = 'Drop pairing here';
+      empty.textContent = 'Awaiting selection';
       slot.appendChild(empty);
     } else {
       const pairing = state.pairings.find((entry) => entry.star_name === placedName);
