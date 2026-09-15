@@ -7,7 +7,7 @@ from sqlalchemy.orm import Session
 from app.config import ADMIN_PASSWORD, ADMIN_USERNAME, CAST_DATA_PATH
 from app.models import EliminationResult, Pairing, PickEntry, PickSheet, Season, SiteMessage, User
 
-PICK_SUBMISSION_DEADLINE = "2026-09-15T20:00:00-05:00"
+PICK_SUBMISSION_DEADLINE = "2026-09-15T20:00:00-04:00"
 
 
 def is_pick_submission_locked() -> bool:
@@ -240,6 +240,37 @@ def get_season_selection_views(db: Session, season_id: int):
 
     selections.sort(key=lambda item: item["player_name"].lower())
     return selections
+
+
+def get_season_pick_averages(db: Session, season_id: int):
+    season = db.query(Season).filter(Season.id == season_id).first()
+    if season is None:
+        raise ValueError("Season does not exist")
+
+    pairings = list_pairings_for_season(db, season_id)
+    sheets = db.query(PickSheet).filter(PickSheet.season_id == season_id).all()
+    sheet_ids = [sheet.id for sheet in sheets]
+    positions_by_pairing = {pairing.id: [] for pairing in pairings}
+
+    if sheet_ids:
+        entries = db.query(PickEntry).filter(PickEntry.pick_sheet_id.in_(sheet_ids)).all()
+        for entry in entries:
+            positions_by_pairing.setdefault(entry.pairing_id, []).append(entry.predicted_position)
+
+    averages = []
+    for pairing in pairings:
+        positions = positions_by_pairing.get(pairing.id, [])
+        if not positions:
+            continue
+        averages.append({
+            "star_name": pairing.star_name,
+            "pro_name": pairing.pro_name,
+            "average_position": round(sum(positions) / len(positions), 1),
+            "pick_count": len(positions),
+        })
+
+    averages.sort(key=lambda item: (item["average_position"], item["star_name"].lower()))
+    return averages
 
 
 def get_season_eliminations(db: Session, season_id: int):

@@ -1,4 +1,4 @@
-# DWTS Picks League
+# DWTS Picks
 
 A lightweight FastAPI app for friends to submit Dancing with the Stars elimination-order picks, view the leaderboard, and manage admin controls.
 

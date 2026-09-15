@@ -14,6 +14,7 @@ from app.services import (
     create_pick_sheet,
     create_user,
     get_season_eliminations,
+    get_season_pick_averages,
     get_season_selection_views,
     get_site_message,
     is_pick_submission_locked,
@@ -25,7 +26,7 @@ from app.services import (
 
 ensure_database_schema()
 
-app = FastAPI(title="DWTS Picks League")
+app = FastAPI(title="DWTS Picks")
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["*"],
@@ -83,7 +84,7 @@ def get_pairings(season_id: int, db: Session = Depends(get_db)):
 
 @app.get("/deadline")
 def get_deadline():
-    return {"deadline": "2026-09-15T20:00:00-05:00", "timezone": "EST"}
+    return {"deadline": "2026-09-15T20:00:00-04:00", "timezone": "EDT"}
 
 
 def require_admin(x_admin_key: str | None = Header(default=None, alias="X-Admin-Key")):
@@ -114,7 +115,7 @@ def update_site_message_endpoint(
 @app.post("/pick-sheets")
 def submit_pick_sheet(payload: PickSubmission, db: Session = Depends(get_db)):
     if is_pick_submission_locked():
-        raise HTTPException(status_code=403, detail="Selections are locked. The deadline passed on Tuesday, September 15 at 8:00 PM EST.")
+        raise HTTPException(status_code=403, detail="Selections are locked. The deadline passed on Tuesday, September 15 at 8:00 PM EDT.")
     try:
         sheet = create_pick_sheet(db, payload.name, payload.season_id, payload.predictions)
     except ValueError as exc:
@@ -162,6 +163,14 @@ def get_season_pick_sheets(season_id: int, db: Session = Depends(get_db)):
     except ValueError as exc:
         raise HTTPException(status_code=404, detail=str(exc)) from exc
     return selections
+
+
+@app.get("/seasons/{season_id}/pick-averages")
+def get_pick_averages(season_id: int, db: Session = Depends(get_db)):
+    try:
+        return get_season_pick_averages(db, season_id)
+    except ValueError as exc:
+        raise HTTPException(status_code=404, detail=str(exc)) from exc
 
 
 @app.get("/leaderboard/{season_id}")

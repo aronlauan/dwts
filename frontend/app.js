@@ -13,10 +13,11 @@ const state = {
   pool: [],
   rankings: [],
   draggedStar: null,
-  deadline: new Date('2026-09-15T20:00:00-05:00'),
+  deadline: new Date('2026-09-15T20:00:00-04:00'),
   hostMessage: '',
   leaderboardRows: [],
   leaderboardPage: 0,
+  pickAveragesLoaded: false,
 };
 
 function setAdminControlsVisible(isVisible) {
@@ -41,6 +42,7 @@ const leaderboardPagination = document.getElementById('leaderboard-pagination');
 const leaderboardPrevious = document.getElementById('leaderboard-previous');
 const leaderboardNext = document.getElementById('leaderboard-next');
 const leaderboardPageStatus = document.getElementById('leaderboard-page-status');
+const pickSectionDescriptionDefault = document.getElementById('pick-section-description')?.innerHTML || '';
 const LEADERBOARD_PAGE_SIZE = 10;
 
 function normalizeApiErrorMessage(detail) {
@@ -394,13 +396,12 @@ function updateCountdown() {
 
   const difference = state.deadline.getTime() - Date.now();
   if (difference <= 0) {
-    countdown.textContent = 'Selections locked — Tuesday, September 15 at 8:00 PM EST';
+    countdown.textContent = 'Selections locked — Tuesday, September 15 at 8:00 PM EDT';
     if (daysNode) daysNode.textContent = '00';
     if (hoursNode) hoursNode.textContent = '00';
     if (minutesNode) minutesNode.textContent = '00';
     if (secondsNode) secondsNode.textContent = '00';
-    const submitButton = document.querySelector('#pick-form button[type="submit"]');
-    if (submitButton) submitButton.disabled = true;
+    setPickSubmissionState(true);
     return;
   }
 
@@ -414,7 +415,66 @@ function updateCountdown() {
   if (minutesNode) minutesNode.textContent = String(minutes).padStart(2, '0');
   if (secondsNode) secondsNode.textContent = String(seconds).padStart(2, '0');
 
-  countdown.textContent = 'Locking before Tuesday, September 15 at 8:00 PM EST';
+  countdown.textContent = 'Locking before Tuesday, September 15 at 8:00 PM EDT';
+  setPickSubmissionState(false);
+}
+
+function setPickSubmissionState(isLocked) {
+  const form = document.getElementById('pick-form');
+  const status = document.getElementById('pick-status');
+  const lockedSummary = document.getElementById('locked-picks-summary');
+  const title = document.getElementById('pick-section-title');
+  const description = document.getElementById('pick-section-description');
+  form?.classList.toggle('hidden', isLocked);
+  status?.classList.toggle('hidden', isLocked);
+  lockedSummary?.classList.toggle('hidden', !isLocked);
+
+  if (title) title.textContent = isLocked ? "Time's Up!" : 'Final Order Selection';
+  if (description) {
+    if (isLocked) {
+      description.textContent = 'Pick submission has ended. Your consensus picks are in.';
+    } else {
+      description.innerHTML = pickSectionDescriptionDefault;
+    }
+    description.classList.toggle('pick-section-description--locked', isLocked);
+  }
+
+  if (isLocked && !state.pickAveragesLoaded) {
+    state.pickAveragesLoaded = true;
+    refreshPickAverages();
+  }
+}
+
+function renderPickAverages(averages) {
+  const chart = document.getElementById('pick-averages-chart');
+  if (!chart) return;
+
+  if (!averages || averages.length === 0) {
+    chart.innerHTML = '<p class="status-text">No submitted sheets yet.</p>';
+    return;
+  }
+
+  const largestAverage = Math.max(...averages.map((item) => item.average_position));
+  chart.innerHTML = averages.map((item) => {
+    const width = Math.max(8, (largestAverage - item.average_position + 1) / largestAverage * 100);
+    return `
+      <div class="average-row">
+        <div class="average-label"><strong>${item.star_name}</strong><span>${item.average_position.toFixed(1)} average finish</span></div>
+        <div class="average-track"><span style="width: ${width}%"></span></div>
+      </div>
+    `;
+  }).join('');
+}
+
+async function refreshPickAverages() {
+  const seasonId = Number(document.getElementById('season-id-input')?.value || state.seasonId || 0);
+  if (!seasonId) return;
+
+  try {
+    renderPickAverages(await api(`/seasons/${seasonId}/pick-averages`));
+  } catch (error) {
+    console.error('Unable to load pick averages:', error);
+  }
 }
 
 function startCountdown() {

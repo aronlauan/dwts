@@ -31,7 +31,7 @@ class SiteMessage(Base):
     __tablename__ = "site_messages"
 
     id = Column(Integer, primary_key=True, index=True)
-    message = Column(String, nullable=False, default="Welcome to the DWTS Picks League!")
+    message = Column(String, nullable=False, default="Welcome to DWTS Picks!")
 
 
 class Pairing(Base):

@@ -7,7 +7,7 @@
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
-    <link rel="stylesheet" href="styles.css?v=20260915-4" />
+    <link rel="stylesheet" href="styles.css?v=20260915-5" />
   </head>
   <body>
     <div class="page-shell">
@@ -36,7 +36,7 @@
         <form id="host-message-form" class="host-message-form hidden">
           <label>
             Update the message
-            <textarea id="host-message-input" rows="3" placeholder="Write a message for the league..."></textarea>
+            <textarea id="host-message-input" rows="3" placeholder="Write a message for everyone..."></textarea>
           </label>
           <button class="primary-btn" type="submit">Save message</button>
         </form>
@@ -245,8 +245,8 @@
           <div class="section-title-row">
             <div>
               <p class="eyebrow">Your sheet</p>
-              <h3>Final Order Selection</h3>
-              <p>
+              <h3 id="pick-section-title">Final Order Selection</h3>
+              <p id="pick-section-description">
                 <b>Click</b> or <b>tap</b> each pairing from the pool, <b>in the order you think they will finish</b> <i>(first click is your winner, second is second place, etc.)</i>.<br>
                 <br>To <b>remove</b> a selection, just click or tap the selection on <b>your sheet</b>.<br>
                 <br>REMEMBER TO SUBMIT BEFORE THE FIRST SHOW STARTS!</p>
@@ -282,6 +282,10 @@
             </div>
           </form>
           <div id="pick-status" class="status-text"></div>
+
+          <div id="locked-picks-summary" class="locked-picks-summary hidden">
+            <div id="pick-averages-chart" class="pick-averages-chart" aria-live="polite"></div>
+          </div>
         </section>
 
         <input id="season-id-input" type="hidden" />
@@ -322,6 +326,6 @@
       </main>
     </div>
 
-    <script src="app.js?v=20260915-4"></script>
+    <script src="app.js?v=20260915-6"></script>
   </body>
 </html>

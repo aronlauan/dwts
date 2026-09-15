@@ -945,6 +945,66 @@ tr:last-child td {
   grid-column: 1 / -1;
 }
 
+.locked-picks-summary {
+  max-width: 760px;
+  padding: 22px;
+  border-radius: 16px;
+  background: rgba(255, 255, 255, 0.38);
+  border: 1px solid rgba(164, 94, 130, 0.12);
+}
+
+.locked-picks-summary h3 {
+  margin: 0 0 8px;
+  font-size: 1.4rem;
+}
+
+.locked-picks-summary > p:not(.eyebrow) {
+  color: var(--muted);
+  line-height: 1.5;
+}
+
+.pick-averages-chart {
+  display: grid;
+  gap: 12px;
+  margin-top: 20px;
+}
+
+.average-row {
+  display: grid;
+  grid-template-columns: minmax(150px, 0.8fr) minmax(0, 1.2fr);
+  align-items: center;
+  gap: 14px;
+}
+
+.average-label {
+  display: grid;
+  gap: 3px;
+  min-width: 0;
+}
+
+.average-label strong {
+  overflow-wrap: anywhere;
+}
+
+.average-label span {
+  color: var(--muted);
+  font-size: 0.82rem;
+}
+
+.average-track {
+  height: 12px;
+  overflow: hidden;
+  border-radius: 999px;
+  background: rgba(244, 60, 146, 0.1);
+}
+
+.average-track span {
+  display: block;
+  height: 100%;
+  border-radius: inherit;
+  background: linear-gradient(90deg, #ffbf69, var(--pink-strong));
+}
+
 .drag-layout {
   display: grid;
   grid-template-columns: minmax(0, 0.9fr) minmax(0, 1.5fr);
