@@ -1450,7 +1450,7 @@ tr:last-child td {
 
   .nav {
     gap: 10px 14px;
-    font-size: 0.9rem;
+    font-size: 0.98rem;
   }
 
   .host-message-header {
@@ -1466,7 +1466,7 @@ tr:last-child td {
   }
 
   .host-message-copy {
-    font-size: 0.98rem;
+    font-size: 1.04rem;
     line-height: 1.55;
     padding: 12px;
   }
@@ -1527,7 +1527,7 @@ tr:last-child td {
   }
 
   .countdown-text {
-    font-size: 0.78rem;
+    font-size: 0.88rem;
     line-height: 1.35;
   }
 
@@ -1542,11 +1542,11 @@ tr:last-child td {
   }
 
   .hero-metrics span {
-    font-size: 10px;
+    font-size: 11px;
   }
 
   .hero-metrics strong {
-    font-size: 0.9rem;
+    font-size: 0.98rem;
     overflow-wrap: anywhere;
   }
 
@@ -1570,13 +1570,13 @@ tr:last-child td {
     grid-template-columns: minmax(66px, auto) auto minmax(0, 1fr);
     gap: 7px;
     padding: 8px;
-    font-size: 0.82rem;
+    font-size: 0.9rem;
   }
 
   .scoring-badge {
     min-width: 0;
     padding: 5px 6px;
-    font-size: 9px;
+    font-size: 10px;
   }
 
   .point-example-row {
@@ -1596,12 +1596,14 @@ tr:last-child td {
     min-width: 0;
     flex: 1 1 calc(50% - 6px);
     justify-content: flex-start;
-    padding: 7px 8px;
+    padding: 8px;
+    font-size: 0.9rem;
   }
 
   .point-pill {
     min-width: 0;
     flex: 1 1 calc(50% - 8px);
+    font-size: 0.9rem;
   }
 
   .leaderboard {
@@ -1636,20 +1638,37 @@ tr:last-child td {
   }
 
   .rank-slot {
-    padding: 8px;
+    padding: 10px;
+  }
+
+  .drag-card-name strong {
+    font-size: 1rem;
+  }
+
+  .drag-card-name small {
+    font-size: 0.88rem;
   }
 
   .timeline-item {
     min-width: 170px;
   }
 
+  .timeline-copy strong {
+    font-size: 1rem;
+  }
+
+  .timeline-copy span {
+    font-size: 0.84rem;
+  }
+
   .selection-row {
-    padding: 8px;
+    padding: 10px;
+    font-size: 0.96rem;
   }
 
   .selection-status {
-    padding: 4px 5px;
-    font-size: 9px;
+    padding: 5px 6px;
+    font-size: 10px;
   }
 
   .inline-actions {
@@ -1659,6 +1678,12 @@ tr:last-child td {
 
   .inline-actions button {
     width: 100%;
+    min-height: 44px;
     padding-inline: 8px;
+  }
+
+  .primary-btn,
+  .secondary-btn {
+    min-height: 44px;
   }
 }

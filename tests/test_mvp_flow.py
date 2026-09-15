@@ -161,6 +161,31 @@ class DWTSMVPFlowTests(unittest.TestCase):
         leaderboard = leaderboard_response.json()
         self.assertEqual(leaderboard[0]["points"], 15)
 
+    def test_pick_submission_is_rejected_after_deadline(self):
+        season_response = self.client.post(
+            "/seasons/bootstrap",
+            json={"name": f"DWTS-Locked-{uuid4().hex[:8]}"},
+        )
+        self.assertEqual(season_response.status_code, 200)
+        season_id = season_response.json()["id"]
+
+        pairings_response = self.client.get(f"/seasons/{season_id}/pairings")
+        self.assertEqual(pairings_response.status_code, 200)
+        predictions = [pairing["star_name"] for pairing in pairings_response.json()]
+
+        with patch("app.main.is_pick_submission_locked", return_value=True):
+            response = self.client.post(
+                "/pick-sheets",
+                json={
+                    "name": f"locked-test-{uuid4().hex[:6]}",
+                    "season_id": season_id,
+                    "predictions": predictions,
+                },
+            )
+
+        self.assertEqual(response.status_code, 403)
+        self.assertIn("deadline", response.json()["detail"].lower())
+
     def test_database_url_override_uses_postgres(self):
         original_url = os.environ.get("DATABASE_URL")
         try:
