@@ -1767,7 +1767,7 @@ tr:last-child td {
 
   .leaderboard tr {
     display: grid;
-    grid-template-columns: 36px minmax(0, 1fr) 46px 46px;
+    grid-template-columns: 40px minmax(0, 1fr) 52px 44px;
     width: 100%;
   }
 
@@ -1776,6 +1776,14 @@ tr:last-child td {
     display: block;
     width: auto;
     min-width: 0;
+  }
+
+  .leaderboard th {
+    padding-right: 2px;
+    padding-left: 2px;
+    white-space: nowrap;
+    font-size: 10px;
+    letter-spacing: 0.04em;
   }
 
   .leaderboard th:nth-child(3),
