@@ -536,7 +536,13 @@ function renderLeaderboard(rows) {
     leaderboardTable.appendChild(tr);
   });
 
-  document.getElementById('current-leader').textContent = `${state.leaderboardRows[0].player_name} (${state.leaderboardRows[0].points} pts)`;
+  const topEntry = state.leaderboardRows[0];
+  const tiedLeaders = state.leaderboardRows.filter(
+    (entry) => entry.points === topEntry.points && entry.exact === topEntry.exact,
+  );
+  document.getElementById('current-leader').textContent = tiedLeaders.length === 1
+    ? `${topEntry.player_name} (${topEntry.points} pts)`
+    : `${tiedLeaders.length} tied for first (${topEntry.points} pts)`;
   document.getElementById('participant-count').textContent = String(state.leaderboardRows.length);
 
   if (leaderboardPagination) {
