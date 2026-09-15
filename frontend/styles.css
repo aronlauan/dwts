@@ -1440,17 +1440,47 @@ tr:last-child td {
   }
 
   .topbar {
-    gap: 14px;
+    display: block;
+    margin: -20px -12px 16px;
+    padding: 18px 14px 12px;
+    background: rgba(255, 255, 255, 0.5);
+    border-bottom: 1px solid rgba(150, 75, 114, 0.12);
+    box-shadow: 0 8px 20px rgba(125, 54, 87, 0.08);
+  }
+
+  .topbar > div {
     margin-bottom: 16px;
   }
 
+  .topbar .eyebrow {
+    margin-bottom: 5px;
+    font-size: 10px;
+  }
+
   h1 {
-    font-size: 2rem;
+    font-size: 1.85rem;
+    line-height: 1.1;
+    letter-spacing: -0.04em;
   }
 
   .nav {
-    gap: 10px 14px;
-    font-size: 0.98rem;
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 6px;
+    width: 100%;
+    font-size: 0.84rem;
+  }
+
+  .nav a {
+    min-height: 42px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    padding: 8px 4px;
+    border: 1px solid rgba(146, 77, 106, 0.12);
+    border-radius: 10px;
+    background: rgba(255, 255, 255, 0.58);
+    text-align: center;
   }
 
   .host-message-header {
