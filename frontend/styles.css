@@ -179,6 +179,13 @@ h1 {
   border: 1px solid rgba(146, 77, 106, 0.12);
 }
 
+.inline-actions {
+  display: flex;
+  gap: 12px;
+  flex-wrap: wrap;
+  align-items: center;
+}
+
 .main-grid {
   display: grid;
   grid-template-columns: 1fr;
@@ -1138,6 +1145,7 @@ tr:last-child td {
 }
 
 .selection-viewer {
+  min-height: 120px;
   overflow-x: auto;
   padding-bottom: 6px;
   background: rgba(255, 255, 255, 0.1);
@@ -1147,7 +1155,8 @@ tr:last-child td {
 .selection-cards {
   display: flex;
   gap: 12px;
-  min-width: max-content;
+  min-width: 0;
+  width: 100%;
   padding-bottom: 8px;
   align-items: flex-start;
 }
@@ -1155,6 +1164,7 @@ tr:last-child td {
 .selection-card {
   flex: 0 0 min(280px, 80vw);
   min-width: 220px;
+  width: 100%;
   padding: 14px 12px;
   border-radius: 16px;
   background: rgba(255, 255, 255, 0.44);
@@ -1367,8 +1377,21 @@ tr:last-child td {
     grid-row: auto;
   }
 
+  .selection-viewer {
+    overflow: visible;
+  }
+
+  .selection-cards {
+    flex-direction: column;
+    min-width: 0;
+    width: 100%;
+  }
+
   .selection-card {
-    flex-basis: min(260px, 78vw);
+    flex-basis: auto;
+    min-width: 0;
+    width: 100%;
+    max-width: none;
   }
 
   .hero {

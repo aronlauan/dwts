@@ -260,6 +260,18 @@ function moveStarToPool(starName) {
   renderRankingList();
 }
 
+function resetPickSheet() {
+  if (!state.pairings.length) return;
+  const confirmed = window.confirm('Reset your current sheet? This will clear your rankings.');
+  if (!confirmed) return;
+
+  state.pool = [...state.pairings.map((pairing) => pairing.star_name)];
+  state.rankings = [];
+  renderPool();
+  renderRankingList();
+  updateStatus('pick-status', 'Selection sheet reset. Start over whenever you are ready.');
+}
+
 function makePredictionOrder() {
   return [...state.rankings].reverse();
 }
@@ -394,9 +406,18 @@ async function recordElimination(event) {
         star_name: starName,
       }),
     });
-    updateStatus('elimination-status', `${result.star_name} recorded as elimination #${result.elimination_order}.`);
+
+    const safeStarName = result?.star_name || starName;
+    const eliminationNumber = result?.elimination_order ?? 1;
+    updateStatus('elimination-status', `${safeStarName} recorded as elimination #${eliminationNumber}.`);
+
+    if (eliminationSelect) {
+      eliminationSelect.value = '';
+    }
+
     await refreshLeaderboard();
     await refreshSelectionViewer();
+    await refreshEliminationTimeline();
   } catch (error) {
     updateStatus('elimination-status', error.message, true);
   }
@@ -480,14 +501,25 @@ async function refreshEliminationTimeline() {
 
 function renderSelectionViewer(entries) {
   if (!selectionViewer) return;
+
   if (!entries || entries.length === 0) {
     selectionViewer.innerHTML = '<p class="status-text">No picks submitted yet.</p>';
     return;
   }
 
   const selectedName = selectionNameSelect?.value;
-  const cards = entries.map((entry) => {
-    const isSelected = selectedName ? entry.player_name === selectedName : entry === entries[0];
+  if (!selectedName) {
+    selectionViewer.innerHTML = '<p class="status-text">Select a participant to view their sheet.</p>';
+    return;
+  }
+
+  const selectedEntries = entries.filter((entry) => entry.player_name === selectedName);
+  if (selectedEntries.length === 0) {
+    selectionViewer.innerHTML = '<p class="status-text">No sheet found for this participant.</p>';
+    return;
+  }
+
+  const cards = selectedEntries.map((entry) => {
     const rows = (entry.prediction_rows || entry.predictions.map((starName, index) => ({
       position: index + 1,
       star_name: starName,
@@ -536,7 +568,7 @@ function renderSelectionViewer(entries) {
       .join('');
 
     return `
-      <div class="selection-card ${isSelected ? 'selected' : ''}">
+      <div class="selection-card selected">
         <h4>${entry.player_name}</h4>
         <ol>${rows}</ol>
       </div>
@@ -558,7 +590,7 @@ async function refreshSelectionViewer() {
       const currentValue = selectionNameSelect.value;
       selectionNameSelect.innerHTML = '<option value="">Choose a participant</option>' +
         names.map((name) => `<option value="${name}">${name}</option>`).join('');
-      selectionNameSelect.value = names.includes(currentValue) ? currentValue : (names[0] || '');
+      selectionNameSelect.value = names.includes(currentValue) ? currentValue : '';
     }
 
     renderSelectionViewer(selections);
@@ -624,6 +656,7 @@ async function init() {
 }
 
 document.getElementById('pick-form')?.addEventListener('submit', submitPicks);
+document.getElementById('reset-picks-button')?.addEventListener('click', resetPickSheet);
 document.getElementById('refresh-leaderboard')?.addEventListener('click', refreshLeaderboard);
 document.getElementById('admin-login-form')?.addEventListener('submit', loginAdmin);
 document.getElementById('host-message-form')?.addEventListener('submit', updateHostMessage);
