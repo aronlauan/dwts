@@ -538,7 +538,7 @@ function renderLeaderboard(rows) {
 
   const topEntry = state.leaderboardRows[0];
   const tiedLeaders = state.leaderboardRows.filter(
-    (entry) => entry.points === topEntry.points && entry.exact === topEntry.exact,
+    (entry) => entry.points === topEntry.points,
   );
   document.getElementById('current-leader').textContent = tiedLeaders.length === 1
     ? `${topEntry.player_name} (${topEntry.points} pts)`
