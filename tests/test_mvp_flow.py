@@ -1,6 +1,7 @@
 import importlib
 import os
 import unittest
+from unittest.mock import patch
 from uuid import uuid4
 
 from fastapi.testclient import TestClient
@@ -116,6 +117,14 @@ class DWTSMVPFlowTests(unittest.TestCase):
             else:
                 os.environ["DATABASE_URL"] = original_url
             reload_config_module()
+
+    def test_postgres_does_not_run_sqlite_legacy_migration(self):
+        from app import db as db_module
+
+        with patch.object(db_module.engine, "dialect") as mock_dialect, patch.object(db_module.Base.metadata, "create_all") as mock_create_all:
+            mock_dialect.name = "postgresql"
+            db_module.ensure_database_schema()
+            mock_create_all.assert_called_once_with(bind=db_module.engine)
 
 
 if __name__ == "__main__":

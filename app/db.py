@@ -10,6 +10,10 @@ Base = declarative_base()
 
 
 def ensure_database_schema():
+    if engine.dialect.name != "sqlite":
+        Base.metadata.create_all(bind=engine)
+        return
+
     with engine.begin() as connection:
         table_exists = connection.execute(
             text("SELECT name FROM sqlite_master WHERE type='table' AND name='pick_sheets'")
