@@ -126,6 +126,16 @@ class DWTSMVPFlowTests(unittest.TestCase):
             db_module.ensure_database_schema()
             mock_create_all.assert_called_once_with(bind=db_module.engine)
 
+    def test_root_serves_frontend_and_health_endpoint(self):
+        root_response = self.client.get("/")
+        self.assertEqual(root_response.status_code, 200)
+        self.assertIn("DWTS 2026 Picks", root_response.text)
+        self.assertIn("<html", root_response.text.lower())
+
+        health_response = self.client.get("/api/health")
+        self.assertEqual(health_response.status_code, 200)
+        self.assertEqual(health_response.json()["message"], "DWTS Picks backend is running")
+
 
 if __name__ == "__main__":
     unittest.main()

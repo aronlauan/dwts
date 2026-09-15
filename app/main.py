@@ -1,8 +1,10 @@
 from fastapi import Depends, FastAPI, Header, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import FileResponse
+from fastapi.staticfiles import StaticFiles
 from sqlalchemy.orm import Session
 
-from app.config import ADMIN_KEY
+from app.config import ADMIN_KEY, FRONTEND_DIR
 from app.db import Base, ensure_database_schema, engine, get_db
 from app.models import Pairing, PickSheet, Season
 from app.schemas import AdminLogin, EliminationCreate, PairingCreate, PickSubmission, SeasonCreate, SiteMessageCreate, UserCreate
@@ -32,9 +34,14 @@ app.add_middleware(
 )
 
 
+@app.get("/api/health")
+def health_check():
+    return {"message": "DWTS Picks backend is running"}
+
+
 @app.get("/")
 def root():
-    return {"message": "DWTS Picks backend is running"}
+    return FileResponse(str(FRONTEND_DIR / "index.html"))
 
 
 @app.post("/users")
@@ -156,3 +163,6 @@ def get_leaderboard(season_id: int, db: Session = Depends(get_db)):
     except ValueError as exc:
         raise HTTPException(status_code=404, detail=str(exc)) from exc
     return leaderboard
+
+
+app.mount("/", StaticFiles(directory=str(FRONTEND_DIR), html=False), name="frontend")
