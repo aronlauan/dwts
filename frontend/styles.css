@@ -870,6 +870,12 @@ tr:last-child td {
   display: flex;
   align-items: center;
   gap: 12px;
+  min-width: 0;
+}
+
+.player-cell span {
+  min-width: 0;
+  overflow-wrap: anywhere;
 }
 
 .avatar {
@@ -1740,14 +1746,45 @@ tr:last-child td {
   }
 
   .leaderboard table {
-    display: block;
-    overflow-x: auto;
-    -webkit-overflow-scrolling: touch;
+    display: table;
+    width: 100%;
+    min-width: 0;
+    table-layout: fixed;
+  }
+
+  .leaderboard th:nth-child(1),
+  .leaderboard td:nth-child(1) {
+    width: 14%;
+  }
+
+  .leaderboard th:nth-child(2),
+  .leaderboard td:nth-child(2) {
+    width: 52%;
+  }
+
+  .leaderboard th:nth-child(3),
+  .leaderboard td:nth-child(3),
+  .leaderboard th:nth-child(4),
+  .leaderboard td:nth-child(4) {
+    width: 17%;
+    text-align: center;
   }
 
   th,
   td {
     padding: 10px 8px;
+    overflow-wrap: anywhere;
+  }
+
+  .player-cell {
+    align-items: flex-start;
+    gap: 8px;
+  }
+
+  .avatar {
+    width: 28px;
+    height: 28px;
+    flex: 0 0 28px;
   }
 
   .drag-layout {
