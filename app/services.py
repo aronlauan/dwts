@@ -162,8 +162,9 @@ def record_elimination(db: Session, season_id: int, star_name: str) -> Eliminati
 
 def compute_points_for_pick(db: Session, pick_sheet_id: int, season_id: int) -> int:
     picks = db.query(PickEntry).filter(PickEntry.pick_sheet_id == pick_sheet_id).all()
+    total_pairings = db.query(Pairing).filter(Pairing.season_id == season_id).count()
     actuals = {
-        entry.pairing_id: entry.elimination_order
+        entry.pairing_id: total_pairings - entry.elimination_order + 1
         for entry in db.query(EliminationResult).filter(EliminationResult.season_id == season_id).all()
     }
 
@@ -187,8 +188,9 @@ def get_season_selection_views(db: Session, season_id: int):
     if season is None:
         raise ValueError("Season does not exist")
 
+    total_pairings = db.query(Pairing).filter(Pairing.season_id == season_id).count()
     actual_eliminations = {
-        item.pairing_id: item.elimination_order
+        item.pairing_id: total_pairings - item.elimination_order + 1
         for item in db.query(EliminationResult).filter(EliminationResult.season_id == season_id).all()
     }
 
@@ -265,17 +267,21 @@ def build_leaderboard(db: Session, season_id: int):
     sheets = db.query(PickSheet).filter(PickSheet.season_id == season_id).all()
     standings = []
 
+    total_pairings = db.query(Pairing).filter(Pairing.season_id == season_id).count()
+
     for sheet in sheets:
         points = compute_points_for_pick(db, sheet.id, season_id)
         exact = 0
         for entry in db.query(PickEntry).filter(PickEntry.pick_sheet_id == sheet.id).all():
-            actual_order = (
+            actual_entry = (
                 db.query(EliminationResult)
                 .filter(EliminationResult.season_id == season_id, EliminationResult.pairing_id == entry.pairing_id)
                 .first()
             )
-            if actual_order and entry.predicted_position == actual_order.elimination_order:
-                exact += 1
+            if actual_entry:
+                actual_rank = total_pairings - actual_entry.elimination_order + 1
+                if entry.predicted_position == actual_rank:
+                    exact += 1
 
         standings.append(
             {

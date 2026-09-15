@@ -123,6 +123,43 @@ class DWTSMVPFlowTests(unittest.TestCase):
         self.assertEqual(eliminations[0]["star_name"], first_elim)
         self.assertEqual(eliminations[0]["elimination_order"], 1)
 
+    def test_first_elimination_counts_as_last_place_pick(self):
+        season_name = f"DWTS-Elim-{uuid4().hex[:8]}"
+        season_response = self.client.post("/seasons/bootstrap", json={"name": season_name})
+        self.assertEqual(season_response.status_code, 200)
+        season_id = season_response.json()["id"]
+
+        pairings_response = self.client.get(f"/seasons/{season_id}/pairings")
+        self.assertEqual(pairings_response.status_code, 200)
+        pairings = pairings_response.json()
+        self.assertGreaterEqual(len(pairings), 3)
+
+        first_elim = pairings[0]["star_name"]
+        predictions = [pairing["star_name"] for pairing in pairings if pairing["star_name"] != first_elim]
+        predictions.append(first_elim)
+
+        submission_response = self.client.post(
+            "/pick-sheets",
+            json={
+                "name": f"elimination-test-{uuid4().hex[:6]}",
+                "season_id": season_id,
+                "predictions": predictions,
+            },
+        )
+        self.assertEqual(submission_response.status_code, 200)
+
+        elimination_response = self.client.post(
+            "/eliminations",
+            json={"season_id": season_id, "star_name": first_elim},
+            headers={"X-Admin-Key": "dwts-admin-dev-key"},
+        )
+        self.assertEqual(elimination_response.status_code, 200)
+
+        leaderboard_response = self.client.get(f"/leaderboard/{season_id}")
+        self.assertEqual(leaderboard_response.status_code, 200)
+        leaderboard = leaderboard_response.json()
+        self.assertEqual(leaderboard[0]["points"], 15)
+
     def test_database_url_override_uses_postgres(self):
         original_url = os.environ.get("DATABASE_URL")
         try:
