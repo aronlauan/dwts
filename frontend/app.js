@@ -36,13 +36,43 @@ const eliminationSelect = document.getElementById('elimination-select');
 const selectionNameSelect = document.getElementById('selection-name-select');
 const selectionViewer = document.getElementById('selection-viewer');
 
+function normalizeApiErrorMessage(detail) {
+  if (!detail) {
+    return 'Request failed';
+  }
+
+  if (typeof detail === 'string') {
+    return detail;
+  }
+
+  if (Array.isArray(detail)) {
+    return detail
+      .map((item) => (typeof item === 'string' ? item : item?.msg || item?.detail || JSON.stringify(item)))
+      .filter(Boolean)
+      .join('; ');
+  }
+
+  if (typeof detail === 'object') {
+    if (typeof detail.message === 'string') return detail.message;
+    if (typeof detail.msg === 'string') return detail.msg;
+    if (typeof detail.detail === 'string') return detail.detail;
+    if (typeof detail.error === 'string') return detail.error;
+    return JSON.stringify(detail);
+  }
+
+  return String(detail);
+}
+
 async function api(path, options = {}) {
+  const { headers: requestHeaders = {}, ...requestOptions } = options;
+  const hasBody = requestOptions.body !== undefined && requestOptions.body !== null && requestOptions.body !== '';
+
   const response = await fetch(`${API_BASE}${path}`, {
+    ...requestOptions,
     headers: {
-      'Content-Type': 'application/json',
-      ...(options.headers || {}),
+      ...(hasBody ? { 'Content-Type': 'application/json' } : {}),
+      ...requestHeaders,
     },
-    ...options,
   });
 
   const text = await response.text();
@@ -54,7 +84,7 @@ async function api(path, options = {}) {
   }
 
   if (!response.ok) {
-    const message = data?.detail || 'Request failed';
+    const message = normalizeApiErrorMessage(data?.detail ?? data);
     throw new Error(message);
   }
 
@@ -64,7 +94,16 @@ async function api(path, options = {}) {
 function updateStatus(elementId, message, isError = false) {
   const node = document.getElementById(elementId);
   if (!node) return;
-  node.textContent = message;
+
+  const renderedMessage = typeof message === 'string'
+    ? message
+    : message == null
+      ? ''
+      : typeof message === 'object'
+        ? JSON.stringify(message)
+        : String(message);
+
+  node.textContent = renderedMessage;
   node.classList.toggle('error', isError);
 }
 
@@ -73,13 +112,54 @@ async function ensureSeason() {
     return state.seasonId;
   }
 
-  const season = await api('/seasons/bootstrap', { method: 'POST' });
+  const season = await api('/seasons/bootstrap', {
+    method: 'POST',
+    body: JSON.stringify({}),
+  });
   state.seasonId = season.id;
   const hiddenSeasonInput = document.getElementById('season-id-input');
   if (hiddenSeasonInput) hiddenSeasonInput.value = String(season.id);
   const seasonNameNode = document.getElementById('season-name');
   if (seasonNameNode) seasonNameNode.textContent = season.name;
   return season.id;
+}
+
+async function refreshEliminationOptions() {
+  const seasonId = Number(document.getElementById('season-id-input')?.value || state.seasonId || 0);
+  if (!eliminationSelect || !state.pairings.length || !seasonId) {
+    return;
+  }
+
+  try {
+    const eliminations = await api(`/seasons/${seasonId}/eliminations`);
+    const eliminatedNames = new Set((eliminations || []).map((item) => item.star_name));
+    const currentValue = eliminationSelect.value;
+
+    eliminationSelect.innerHTML = '<option value="">Select a pairing</option>';
+
+    const remaining = state.pairings.filter((pairing) => !eliminatedNames.has(pairing.star_name));
+    if (remaining.length === 0) {
+      const option = document.createElement('option');
+      option.value = '';
+      option.textContent = 'No remaining pairings';
+      option.disabled = true;
+      eliminationSelect.appendChild(option);
+      return;
+    }
+
+    remaining.forEach((pairing) => {
+      const option = document.createElement('option');
+      option.value = pairing.star_name;
+      option.textContent = `${pairing.star_name} (${pairing.pro_name})`;
+      eliminationSelect.appendChild(option);
+    });
+
+    if (currentValue && remaining.some((pairing) => pairing.star_name === currentValue)) {
+      eliminationSelect.value = currentValue;
+    }
+  } catch (error) {
+    console.error('Unable to refresh elimination options:', error);
+  }
 }
 
 async function loadPairings() {
@@ -89,14 +169,7 @@ async function loadPairings() {
   state.pool = pairings.map((pairing) => pairing.star_name);
   state.rankings = [];
 
-  eliminationSelect.innerHTML = '<option value="">Select a pairing</option>';
-
-  pairings.forEach((pairing) => {
-    const option = document.createElement('option');
-    option.value = pairing.star_name;
-    option.textContent = `${pairing.star_name} (${pairing.pro_name})`;
-    eliminationSelect.appendChild(option);
-  });
+  await refreshEliminationOptions();
 
   renderPool();
   renderRankingList();
@@ -418,6 +491,7 @@ async function recordElimination(event) {
     await refreshLeaderboard();
     await refreshSelectionViewer();
     await refreshEliminationTimeline();
+    await refreshEliminationOptions();
   } catch (error) {
     updateStatus('elimination-status', error.message, true);
   }
@@ -461,6 +535,7 @@ async function refreshLeaderboard() {
     renderLeaderboard(rows);
     await refreshSelectionViewer();
     await refreshEliminationTimeline();
+    await refreshEliminationOptions();
   } catch (error) {
     console.error(error);
   }
