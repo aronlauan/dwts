@@ -116,12 +116,87 @@
             <button id="refresh-leaderboard" class="secondary-btn" type="button">Refresh</button>
           </div>
 
+          <div class="scoring-panel" aria-live="polite">
+            <div class="scoring-header">
+              <h4>Scoring explained</h4>
+            </div>
+            <div class="scoring-list">
+              <div class="scoring-rule scoring-rule--exact">
+                <span class="scoring-badge exact">Exact</span>
+                <strong>+15</strong>
+                <span>Perfect prediction.</span>
+              </div>
+              <div class="scoring-rule scoring-rule--one">
+                <span class="scoring-badge one">1 off</span>
+                <strong>+8</strong>
+                <span>One place away.</span>
+              </div>
+              <div class="scoring-rule scoring-rule--two">
+                <span class="scoring-badge two">2 off</span>
+                <strong>+4</strong>
+                <span>Still gets a little credit.</span>
+              </div>
+              <div class="scoring-rule scoring-rule--wrong">
+                <span class="scoring-badge wrong">3+ off</span>
+                <strong>0</strong>
+                <span>No points for that pick.</span>
+              </div>
+            </div>
+
+            <div class="scoring-example">
+              <p class="scoring-example-label">Example</p>
+              <div class="point-example">
+                <div class="point-example-row">
+                  <div class="guess-stack">
+                    <span class="sample-label">Your pick</span>
+                    <div class="sample-order sample-order--plain">
+                      <span class="sample-slot sample-slot--plain"><span class="sample-position">1</span> A</span>
+                      <span class="sample-slot sample-slot--plain"><span class="sample-position">2</span> B</span>
+                      <span class="sample-slot sample-slot--plain"><span class="sample-position">3</span> C</span>
+                      <span class="sample-slot sample-slot--plain"><span class="sample-position">4</span> D</span>
+                      <span class="sample-slot sample-slot--plain"><span class="sample-position">5</span> E</span>
+                    </div>
+                  </div>
+                  <div class="example-arrow">→</div>
+                  <div class="actual-stack">
+                    <span class="sample-label">Actual</span>
+                    <div class="sample-order">
+                      <span class="sample-slot sample-slot--exact"><span class="sample-position">1</span> A</span>
+                      <span class="sample-slot sample-slot--wrong"><span class="sample-position">2</span> E</span>
+                      <span class="sample-slot sample-slot--exact"><span class="sample-position">3</span> C</span>
+                      <span class="sample-slot sample-slot--two"><span class="sample-position">4</span> B</span>
+                      <span class="sample-slot sample-slot--one"><span class="sample-position">5</span> D</span>
+                    </div>
+                  </div>
+                </div>
+
+                <div class="score-result-panel">
+                  <p class="score-result-label">Scoring result</p>
+                  <div class="point-breakdown">
+                    <div class="point-pill point-pill--exact"><span>A</span><strong>+15</strong></div>
+                    <div class="point-pill point-pill--two"><span>B</span><strong>+4</strong></div>
+                    <div class="point-pill point-pill--exact"><span>C</span><strong>+15</strong></div>
+                    <div class="point-pill point-pill--one"><span>D</span><strong>+8</strong></div>
+                    <div class="point-pill point-pill--wrong"><span>E</span><strong>0</strong></div>
+                    <div class="point-pill point-pill--total"><span>Total</span><strong>42</strong></div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+
           <table>
             <thead>
               <tr>
                 <th>Rank</th>
                 <th>Player</th>
-                <th>Points</th>
+                <th>
+                  <span class="points-header">
+                    Points
+                    <span class="tooltip-trigger" tabindex="0" aria-label="Scoring information">?</span>
+                    <span class="tooltip-bubble">Exact: +15 • 1 off: +8 • 2 off: +4 • 3+ off: 0</span>
+                  </span>
+                </th>
                 <th>Exact</th>
               </tr>
             </thead>
@@ -129,23 +204,19 @@
           </table>
         </section>
 
-        <aside class="card mini-panel">
-          <p class="eyebrow">Join the league</p>
-          <h3>Submit your picks</h3>
-          <div class="status-text">Use the name you want displayed on the leaderboard.</div>
-        </aside>
-
         <section id="pick-sheet" class="card picks-card">
           <div class="section-title-row">
             <div>
               <p class="eyebrow">Your sheet</p>
-              <h3>Elimination Order</h3>
+              <h3>Final Order Selection</h3>
+              <p>Pick the final order of pairings at the end of the season. As pairings are eliminated, check the leaderboard to see who's most correct!</p>
             </div>
           </div>
 
           <form id="pick-form" class="stacked-form">
+            <div class="status-text">Use the name you want displayed on the leaderboard.</div>
             <label>
-              Name
+              Your name:
               <input id="player-name-input" type="text" placeholder="Enter your name" />
             </label>
 
@@ -173,8 +244,18 @@
         <section class="card feed-card">
           <div class="section-title-row">
             <div>
-              <p class="eyebrow">League picks</p>
-              <h3>View selections</h3>
+              <p class="eyebrow">Season watch</p>
+              <h3>Elimination timeline</h3>
+            </div>
+          </div>
+          <div id="elimination-timeline" class="elimination-timeline"></div>
+        </section>
+
+        <section class="card feed-card">
+          <div class="section-title-row">
+            <div>
+              <p class="eyebrow">See other people's picks</p>
+              <h3>Pick a sheet: </h3>
             </div>
           </div>
 
@@ -186,8 +267,16 @@
               </select>
             </label>
           </form>
+          <div class="selection-legend" aria-label="Scoring legend">
+            <div class="legend-item"><span class="legend-swatch legend-correct"></span>Exact</div>
+            <div class="legend-item"><span class="legend-swatch legend-partial"></span>1 off</div>
+            <div class="legend-item"><span class="legend-swatch legend-near"></span>2 off</div>
+            <div class="legend-item"><span class="legend-swatch legend-incorrect"></span>Incorrect</div>
+          </div>
           <div id="selection-viewer" class="selection-viewer"></div>
         </section>
+
+        <input id="season-id-input" type="hidden" />
 
         <section id="admin" class="card feed-card admin-panel">
           <div class="section-title-row">
@@ -212,10 +301,6 @@
 
           <div id="admin-controls" class="hidden">
             <form id="elimination-form" class="stacked-form">
-              <label>
-                Season ID
-                <input id="season-id-input" type="number" min="1" placeholder="Season ID" />
-              </label>
               <label>
                 Eliminated pairing
                 <select id="elimination-select"></select>

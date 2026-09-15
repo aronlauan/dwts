@@ -13,6 +13,7 @@ from app.services import (
     build_leaderboard,
     create_pick_sheet,
     create_user,
+    get_season_eliminations,
     get_season_selection_views,
     get_site_message,
     is_pick_submission_locked,
@@ -135,13 +136,20 @@ def add_elimination(
     db: Session = Depends(get_db),
     _: str = Depends(require_admin),
 ):
+    season_id = payload.season_id
+    if season_id is None:
+        season = db.query(Season).order_by(Season.id.desc()).first()
+        if season is None:
+            raise HTTPException(status_code=404, detail="No active season found")
+        season_id = season.id
+
     try:
-        result = record_elimination(db, payload.season_id, payload.star_name)
+        result = record_elimination(db, season_id, payload.star_name)
     except ValueError as exc:
         raise HTTPException(status_code=400, detail=str(exc)) from exc
     return {
         "id": result.id,
-        "season_id": payload.season_id,
+        "season_id": season_id,
         "star_name": payload.star_name,
         "elimination_order": result.elimination_order,
     }
@@ -163,6 +171,15 @@ def get_leaderboard(season_id: int, db: Session = Depends(get_db)):
     except ValueError as exc:
         raise HTTPException(status_code=404, detail=str(exc)) from exc
     return leaderboard
+
+
+@app.get("/seasons/{season_id}/eliminations")
+def get_eliminations(season_id: int, db: Session = Depends(get_db)):
+    try:
+        eliminations = get_season_eliminations(db, season_id)
+    except ValueError as exc:
+        raise HTTPException(status_code=404, detail=str(exc)) from exc
+    return eliminations
 
 
 app.mount("/", StaticFiles(directory=str(FRONTEND_DIR), html=False), name="frontend")

@@ -19,7 +19,7 @@ class PickSubmission(BaseModel):
 
 
 class EliminationCreate(BaseModel):
-    season_id: int
+    season_id: Optional[int] = None
     star_name: str
 
 

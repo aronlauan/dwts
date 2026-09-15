@@ -75,8 +75,10 @@ async function ensureSeason() {
 
   const season = await api('/seasons/bootstrap', { method: 'POST' });
   state.seasonId = season.id;
-  document.getElementById('season-id-input').value = season.id;
-  document.getElementById('season-name').textContent = season.name;
+  const hiddenSeasonInput = document.getElementById('season-id-input');
+  if (hiddenSeasonInput) hiddenSeasonInput.value = String(season.id);
+  const seasonNameNode = document.getElementById('season-name');
+  if (seasonNameNode) seasonNameNode.textContent = season.name;
   return season.id;
 }
 
@@ -367,11 +369,16 @@ async function submitPicks(event) {
 
 async function recordElimination(event) {
   event.preventDefault();
-  const seasonId = document.getElementById('season-id-input').value || state.seasonId;
+  const seasonId = document.getElementById('season-id-input')?.value || state.seasonId;
   const starName = eliminationSelect.value;
 
-  if (!seasonId || !starName) {
-    updateStatus('elimination-status', 'Pick a season and eliminated pairing.', true);
+  if (!starName) {
+    updateStatus('elimination-status', 'Pick an eliminated pairing.', true);
+    return;
+  }
+
+  if (!seasonId) {
+    updateStatus('elimination-status', 'No active season is available yet.', true);
     return;
   }
 
@@ -389,6 +396,7 @@ async function recordElimination(event) {
     });
     updateStatus('elimination-status', `${result.star_name} recorded as elimination #${result.elimination_order}.`);
     await refreshLeaderboard();
+    await refreshSelectionViewer();
   } catch (error) {
     updateStatus('elimination-status', error.message, true);
   }
@@ -424,15 +432,49 @@ function renderLeaderboard(rows) {
 }
 
 async function refreshLeaderboard() {
-  const seasonId = document.getElementById('season-id-input').value || state.seasonId;
+  const seasonId = Number(document.getElementById('season-id-input')?.value || state.seasonId || 0);
   if (!seasonId) return;
 
   try {
     const rows = await api(`/leaderboard/${seasonId}`);
     renderLeaderboard(rows);
     await refreshSelectionViewer();
+    await refreshEliminationTimeline();
   } catch (error) {
     console.error(error);
+  }
+}
+
+function renderEliminationTimeline(entries) {
+  const timeline = document.getElementById('elimination-timeline');
+  if (!timeline) return;
+
+  if (!entries || entries.length === 0) {
+    timeline.innerHTML = '<p class="status-text">No eliminations recorded yet.</p>';
+    return;
+  }
+
+  timeline.innerHTML = entries.map((item, index) => `
+    <div class="timeline-item ${index === 0 ? 'timeline-item--featured' : ''}">
+      <div class="timeline-order">#${item.elimination_order}</div>
+      <div class="timeline-copy">
+        <strong>${item.star_name}</strong>
+        <span>with ${item.pro_name}</span>
+      </div>
+    </div>
+  `).join('');
+}
+
+async function refreshEliminationTimeline() {
+  const seasonId = Number(document.getElementById('season-id-input')?.value || state.seasonId || 0);
+  if (!seasonId) return;
+
+  try {
+    const items = await api(`/seasons/${seasonId}/eliminations`);
+    renderEliminationTimeline(items);
+  } catch (error) {
+    console.error(error);
+    renderEliminationTimeline([]);
   }
 }
 
@@ -444,32 +486,68 @@ function renderSelectionViewer(entries) {
   }
 
   const selectedName = selectionNameSelect?.value;
-  const selection = selectedName
-    ? entries.find((entry) => entry.player_name === selectedName)
-    : entries[0];
+  const cards = entries.map((entry) => {
+    const isSelected = selectedName ? entry.player_name === selectedName : entry === entries[0];
+    const rows = (entry.prediction_rows || entry.predictions.map((starName, index) => ({
+      position: index + 1,
+      star_name: starName,
+      is_eliminated: false,
+    })))
+      .map((row) => {
+        const position = Number(row.position ?? row.predicted_position ?? 1);
+        const actualOrder = row.elimination_order != null ? Number(row.elimination_order) : null;
+        const distance = actualOrder != null ? Math.abs(position - actualOrder) : null;
+        const isExact = actualOrder != null && distance === 0;
+        const isPartial = actualOrder != null && distance > 0 && distance <= 2;
+        const isIncorrect = actualOrder != null && distance > 2;
 
-  if (!selection) {
-    selectionViewer.innerHTML = '<p class="status-text">No selection available for that name.</p>';
-    return;
-  }
+        const rowClass = isExact
+          ? 'selection-row--correct'
+          : distance === 1
+            ? 'selection-row--partial'
+            : distance === 2
+              ? 'selection-row--near'
+              : isIncorrect
+                ? 'selection-row--incorrect'
+                : row.is_eliminated
+                  ? 'selection-row--eliminated'
+                  : '';
 
-  const picks = selection.predictions.map((starName, index) => `
-    <li class="selection-row">
-      <span class="selection-rank">${index + 1}</span>
-      <span>${starName}</span>
-    </li>
-  `).join('');
+        const statusMarkup = isExact
+          ? '<span class="selection-status exact">Exact</span>'
+          : distance === 1
+            ? `<span class="selection-status partial">1 off</span>`
+            : distance === 2
+              ? `<span class="selection-status near">2 off</span>`
+              : isIncorrect
+                ? `<span class="selection-status incorrect">${distance} off</span>`
+                : row.is_eliminated
+                  ? '<span class="selection-status">Out</span>'
+                  : '';
 
-  selectionViewer.innerHTML = `
-    <div class="selection-card">
-      <h4>${selection.player_name}</h4>
-      <ol>${picks}</ol>
-    </div>
-  `;
+        return `
+          <li class="selection-row ${rowClass}">
+            <span class="selection-rank">${position}</span>
+            <span class="selection-name">${row.star_name}</span>
+            ${statusMarkup}
+          </li>
+        `;
+      })
+      .join('');
+
+    return `
+      <div class="selection-card ${isSelected ? 'selected' : ''}">
+        <h4>${entry.player_name}</h4>
+        <ol>${rows}</ol>
+      </div>
+    `;
+  }).join('');
+
+  selectionViewer.innerHTML = `<div class="selection-cards">${cards}</div>`;
 }
 
 async function refreshSelectionViewer() {
-  const seasonId = document.getElementById('season-id-input').value || state.seasonId;
+  const seasonId = Number(document.getElementById('season-id-input')?.value || state.seasonId || 0);
   if (!seasonId) return;
 
   try {
@@ -535,7 +613,8 @@ async function init() {
   try {
     await loadHostMessage();
     const seasonId = await ensureSeason();
-    document.getElementById('season-id-input').value = seasonId;
+    const hiddenSeasonInput = document.getElementById('season-id-input');
+    if (hiddenSeasonInput) hiddenSeasonInput.value = String(seasonId);
     await loadPairings();
     await refreshLeaderboard();
     startCountdown();
@@ -550,7 +629,7 @@ document.getElementById('admin-login-form')?.addEventListener('submit', loginAdm
 document.getElementById('host-message-form')?.addEventListener('submit', updateHostMessage);
 document.getElementById('elimination-form')?.addEventListener('submit', recordElimination);
 selectionNameSelect?.addEventListener('change', async () => {
-  const seasonId = document.getElementById('season-id-input').value || state.seasonId;
+  const seasonId = Number(document.getElementById('season-id-input')?.value || state.seasonId || 0);
   if (!seasonId) return;
   try {
     const selections = await api(`/seasons/${seasonId}/pick-sheets`);

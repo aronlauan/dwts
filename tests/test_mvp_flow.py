@@ -84,6 +84,17 @@ class DWTSMVPFlowTests(unittest.TestCase):
         )
         self.assertEqual(authorized_response.status_code, 200)
 
+        selection_view_response = self.client.get(f"/seasons/{season['id']}/pick-sheets")
+        self.assertEqual(selection_view_response.status_code, 200)
+        selections = selection_view_response.json()
+        self.assertTrue(selections)
+        first_selection = selections[0]
+        self.assertIn("prediction_rows", first_selection)
+        eliminated_row = next(
+            row for row in first_selection["prediction_rows"] if row["star_name"] == first_elim
+        )
+        self.assertTrue(eliminated_row["is_eliminated"])
+
         host_message_response = self.client.get("/site-message")
         self.assertEqual(host_message_response.status_code, 200)
         initial_message = host_message_response.json()["message"]
@@ -104,6 +115,13 @@ class DWTSMVPFlowTests(unittest.TestCase):
         self.assertGreater(len(leaderboard), 0)
         self.assertEqual(leaderboard[0]["player_name"], player_name)
         self.assertGreaterEqual(leaderboard[0]["points"], 0)
+
+        eliminations_response = self.client.get(f"/seasons/{season['id']}/eliminations")
+        self.assertEqual(eliminations_response.status_code, 200)
+        eliminations = eliminations_response.json()
+        self.assertGreater(len(eliminations), 0)
+        self.assertEqual(eliminations[0]["star_name"], first_elim)
+        self.assertEqual(eliminations[0]["elimination_order"], 1)
 
     def test_database_url_override_uses_postgres(self):
         original_url = os.environ.get("DATABASE_URL")

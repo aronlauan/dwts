@@ -187,25 +187,74 @@ def get_season_selection_views(db: Session, season_id: int):
     if season is None:
         raise ValueError("Season does not exist")
 
+    actual_eliminations = {
+        item.pairing_id: item.elimination_order
+        for item in db.query(EliminationResult).filter(EliminationResult.season_id == season_id).all()
+    }
+
     sheets = db.query(PickSheet).filter(PickSheet.season_id == season_id).all()
     selections = []
 
     for sheet in sheets:
         ranked = {}
-        for entry in db.query(PickEntry).filter(PickEntry.pick_sheet_id == sheet.id).order_by(PickEntry.predicted_position.asc()).all():
+        entries = (
+            db.query(PickEntry)
+            .filter(PickEntry.pick_sheet_id == sheet.id)
+            .order_by(PickEntry.predicted_position.asc())
+            .all()
+        )
+
+        for entry in entries:
             pairing = db.query(Pairing).filter(Pairing.id == entry.pairing_id).first()
-            if pairing is not None:
-                ranked[entry.predicted_position] = {"star_name": pairing.star_name, "pro_name": pairing.pro_name}
+            if pairing is None:
+                continue
+
+            actual_order = actual_eliminations.get(pairing.id)
+            ranked[entry.predicted_position] = {
+                "position": entry.predicted_position,
+                "star_name": pairing.star_name,
+                "pro_name": pairing.pro_name,
+                "is_eliminated": actual_order is not None,
+                "elimination_order": actual_order,
+                "status": "out" if actual_order is not None else "alive",
+            }
 
         ordered_predictions = [ranked[position]["star_name"] for position in sorted(ranked.keys())]
+        prediction_rows = [ranked[position] for position in sorted(ranked.keys())]
         selections.append({
             "sheet_id": sheet.id,
             "player_name": sheet.player_name,
             "predictions": ordered_predictions,
+            "prediction_rows": prediction_rows,
         })
 
     selections.sort(key=lambda item: item["player_name"].lower())
     return selections
+
+
+def get_season_eliminations(db: Session, season_id: int):
+    season = db.query(Season).filter(Season.id == season_id).first()
+    if season is None:
+        raise ValueError("Season does not exist")
+
+    results = (
+        db.query(EliminationResult)
+        .filter(EliminationResult.season_id == season_id)
+        .order_by(EliminationResult.elimination_order.asc())
+        .all()
+    )
+
+    timeline = []
+    for result in results:
+        pairing = db.query(Pairing).filter(Pairing.id == result.pairing_id).first()
+        if pairing is None:
+            continue
+        timeline.append({
+            "elimination_order": result.elimination_order,
+            "star_name": pairing.star_name,
+            "pro_name": pairing.pro_name,
+        })
+    return timeline
 
 
 def build_leaderboard(db: Session, season_id: int):
