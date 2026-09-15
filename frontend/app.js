@@ -335,7 +335,7 @@ function moveStarToPool(starName) {
 
 function resetPickSheet() {
   if (!state.pairings.length) return;
-  const confirmed = window.confirm('Reset your current sheet? This will clear your rankings.');
+  const confirmed = window.confirm("Start a new sheet? This will clear your rankings, but won't delete any sheet you've already submitted.");
   if (!confirmed) return;
 
   state.pool = [...state.pairings.map((pairing) => pairing.star_name)];
