@@ -346,7 +346,7 @@ function resetPickSheet() {
 }
 
 function makePredictionOrder() {
-  return [...state.rankings].reverse();
+  return [...state.rankings];
 }
 
 async function loginAdmin(event) {
@@ -595,11 +595,13 @@ function renderSelectionViewer(entries) {
   }
 
   const cards = selectedEntries.map((entry) => {
-    const rows = (entry.prediction_rows || entry.predictions.map((starName, index) => ({
+    const orderedRows = [...(entry.prediction_rows || entry.predictions.map((starName, index) => ({
       position: index + 1,
       star_name: starName,
       is_eliminated: false,
-    })))
+    })))].sort((left, right) => Number(left.position ?? left.predicted_position ?? 0) - Number(right.position ?? right.predicted_position ?? 0));
+
+    const rows = orderedRows
       .map((row) => {
         const position = Number(row.position ?? row.predicted_position ?? 1);
         const actualOrder = row.elimination_order != null ? Number(row.elimination_order) : null;
