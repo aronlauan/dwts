@@ -1298,6 +1298,16 @@ tr:last-child td {
   border: 1px solid rgba(146, 74, 112, 0.08);
 }
 
+.selection-picker-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
+}
+
+.compare-picks-button {
+  justify-self: start;
+}
+
 .legend-item {
   display: inline-flex;
   align-items: center;
@@ -1340,7 +1350,8 @@ tr:last-child td {
 }
 
 .selection-cards {
-  display: flex;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
   gap: 12px;
   min-width: 0;
   width: 100%;
@@ -1348,9 +1359,12 @@ tr:last-child td {
   align-items: flex-start;
 }
 
+.selection-cards--comparison {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
 .selection-card {
-  flex: 0 0 min(280px, 80vw);
-  min-width: 220px;
+  min-width: 0;
   width: 100%;
   padding: 14px 12px;
   border-radius: 16px;
@@ -1574,13 +1588,14 @@ tr:last-child td {
   }
 
   .selection-cards {
-    flex-direction: column;
-    min-width: 0;
-    width: 100%;
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .selection-cards--comparison {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 
   .selection-card {
-    flex-basis: auto;
     min-width: 0;
     width: 100%;
     max-width: none;
@@ -1982,6 +1997,53 @@ tr:last-child td {
     font-size: 0.96rem;
   }
 
+  .selection-cards--comparison {
+    gap: 8px;
+  }
+
+  .selection-cards--comparison .selection-card {
+    padding: 10px 8px;
+  }
+
+  .selection-cards--comparison .selection-card h4 {
+    font-size: 0.88rem;
+    overflow-wrap: anywhere;
+  }
+
+  .selection-cards--comparison .selection-card ol {
+    gap: 6px;
+  }
+
+  .selection-cards--comparison .selection-row {
+    flex-wrap: wrap;
+    gap: 5px;
+    padding: 7px;
+    font-size: 0.84rem;
+  }
+
+  .selection-cards--comparison .selection-name {
+    font-size: 0.76rem;
+    line-height: 1.2;
+  }
+
+  .selection-cards--comparison .selection-name--wrapped {
+    font-size: 0.76rem;
+    line-height: 1.15;
+  }
+
+  .selection-cards--comparison .selection-status {
+    margin-left: 31px;
+  }
+
+  .selection-cards--comparison .selection-rank {
+    width: 24px;
+    height: 24px;
+  }
+
+  .selection-cards--comparison .selection-status {
+    font-size: 9px;
+  }
+
   .selection-status {
     padding: 5px 6px;
     font-size: 10px;
@@ -1996,6 +2058,10 @@ tr:last-child td {
     width: 100%;
     min-height: 44px;
     padding-inline: 8px;
+  }
+
+  .selection-picker-grid {
+    grid-template-columns: 1fr;
   }
 
   .primary-btn,

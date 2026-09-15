@@ -41,6 +41,9 @@ const pairingPool = document.getElementById('pairing-pool');
 const rankedPairs = document.getElementById('ranked-pairs');
 const eliminationSelect = document.getElementById('elimination-select');
 const selectionNameSelect = document.getElementById('selection-name-select');
+const comparisonNameSelect = document.getElementById('comparison-name-select');
+const comparisonNamePicker = document.getElementById('comparison-name-picker');
+const comparePicksButton = document.getElementById('compare-picks-button');
 const selectionViewer = document.getElementById('selection-viewer');
 const leaderboardPagination = document.getElementById('leaderboard-pagination');
 const leaderboardPrevious = document.getElementById('leaderboard-previous');
@@ -747,13 +750,18 @@ function renderSelectionViewer(entries) {
     return;
   }
 
-  const selectedName = selectionNameSelect?.value;
-  if (!selectedName) {
+  const selectedNames = [selectionNameSelect?.value];
+  if (!comparisonNamePicker?.classList.contains('hidden')) {
+    selectedNames.push(comparisonNameSelect?.value);
+  }
+  const activeNames = selectedNames.filter(Boolean);
+
+  if (activeNames.length === 0) {
     selectionViewer.innerHTML = '<p class="status-text">Select a participant to view their sheet.</p>';
     return;
   }
 
-  const selectedEntries = entries.filter((entry) => entry.player_name === selectedName);
+  const selectedEntries = entries.filter((entry) => activeNames.includes(entry.player_name));
   if (selectedEntries.length === 0) {
     selectionViewer.innerHTML = '<p class="status-text">No sheet found for this participant.</p>';
     return;
@@ -817,7 +825,17 @@ function renderSelectionViewer(entries) {
     `;
   }).join('');
 
-  selectionViewer.innerHTML = `<div class="selection-cards">${cards}</div>`;
+  const comparisonClass = selectedEntries.length === 2 ? ' selection-cards--comparison' : '';
+  selectionViewer.innerHTML = `<div class="selection-cards${comparisonClass}">${cards}</div>`;
+
+  if (selectedEntries.length === 2) {
+    requestAnimationFrame(() => {
+      selectionViewer.querySelectorAll('.selection-name').forEach((name) => {
+        const lineHeight = Number.parseFloat(getComputedStyle(name).lineHeight);
+        name.classList.toggle('selection-name--wrapped', name.scrollHeight > lineHeight + 1);
+      });
+    });
+  }
 }
 
 async function refreshSelectionViewer() {
@@ -833,6 +851,13 @@ async function refreshSelectionViewer() {
       selectionNameSelect.innerHTML = '<option value="">Choose a participant</option>' +
         names.map((name) => `<option value="${name}">${name}</option>`).join('');
       selectionNameSelect.value = names.includes(currentValue) ? currentValue : '';
+    }
+
+    if (comparisonNameSelect) {
+      const currentValue = comparisonNameSelect.value;
+      comparisonNameSelect.innerHTML = '<option value="">Choose a second participant</option>' +
+        names.map((name) => `<option value="${name}">${name}</option>`).join('');
+      comparisonNameSelect.value = names.includes(currentValue) ? currentValue : '';
     }
 
     renderSelectionViewer(selections);
@@ -914,6 +939,22 @@ selectionNameSelect?.addEventListener('change', async () => {
   } catch (error) {
     console.error(error);
   }
+});
+comparisonNameSelect?.addEventListener('change', async () => {
+  const seasonId = Number(document.getElementById('season-id-input')?.value || state.seasonId || 0);
+  if (!seasonId) return;
+  try {
+    renderSelectionViewer(await api(`/seasons/${seasonId}/pick-sheets`));
+  } catch (error) {
+    console.error(error);
+  }
+});
+comparePicksButton?.addEventListener('click', () => {
+  const isComparing = !comparisonNamePicker?.classList.contains('hidden');
+  comparisonNamePicker?.classList.toggle('hidden', isComparing);
+  if (comparisonNameSelect && isComparing) comparisonNameSelect.value = '';
+  if (comparePicksButton) comparePicksButton.textContent = isComparing ? 'Compare picks' : 'Stop comparing';
+  refreshSelectionViewer();
 });
 
 setAdminControlsVisible(false);
