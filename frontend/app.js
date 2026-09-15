@@ -541,6 +541,16 @@ async function refreshLeaderboard() {
   }
 }
 
+function getOrdinalSuffix(value) {
+  const remainder = value % 10;
+  const teen = value % 100;
+
+  if (remainder === 1 && teen !== 11) return 'st';
+  if (remainder === 2 && teen !== 12) return 'nd';
+  if (remainder === 3 && teen !== 13) return 'rd';
+  return 'th';
+}
+
 function renderEliminationTimeline(entries) {
   const timeline = document.getElementById('elimination-timeline');
   if (!timeline) return;
@@ -550,15 +560,18 @@ function renderEliminationTimeline(entries) {
     return;
   }
 
-  timeline.innerHTML = entries.map((item, index) => `
-    <div class="timeline-item ${index === 0 ? 'timeline-item--featured' : ''}">
-      <div class="timeline-order">#${item.elimination_order}</div>
-      <div class="timeline-copy">
-        <strong>${item.star_name}</strong>
-        <span>with ${item.pro_name}</span>
+  timeline.innerHTML = entries.map((item, index) => {
+    const finishPlace = Number(item.place_finished ?? item.elimination_order ?? 0);
+    return `
+      <div class="timeline-item ${index === 0 ? 'timeline-item--featured' : ''}">
+        <div class="timeline-order">#${finishPlace}${getOrdinalSuffix(finishPlace)}</div>
+        <div class="timeline-copy">
+          <strong>${item.star_name}</strong>
+          <span>with ${item.pro_name}</span>
+        </div>
       </div>
-    </div>
-  `).join('');
+    `;
+  }).join('');
 }
 
 async function refreshEliminationTimeline() {

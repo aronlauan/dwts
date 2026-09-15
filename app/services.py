@@ -239,6 +239,7 @@ def get_season_eliminations(db: Session, season_id: int):
     if season is None:
         raise ValueError("Season does not exist")
 
+    total_pairings = db.query(Pairing).filter(Pairing.season_id == season_id).count()
     results = (
         db.query(EliminationResult)
         .filter(EliminationResult.season_id == season_id)
@@ -253,6 +254,7 @@ def get_season_eliminations(db: Session, season_id: int):
             continue
         timeline.append({
             "elimination_order": result.elimination_order,
+            "place_finished": total_pairings - result.elimination_order + 1,
             "star_name": pairing.star_name,
             "pro_name": pairing.pro_name,
         })

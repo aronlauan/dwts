@@ -122,6 +122,7 @@ class DWTSMVPFlowTests(unittest.TestCase):
         self.assertGreater(len(eliminations), 0)
         self.assertEqual(eliminations[0]["star_name"], first_elim)
         self.assertEqual(eliminations[0]["elimination_order"], 1)
+        self.assertEqual(eliminations[0]["place_finished"], len(pairings))
 
     def test_first_elimination_counts_as_last_place_pick(self):
         season_name = f"DWTS-Elim-{uuid4().hex[:8]}"
