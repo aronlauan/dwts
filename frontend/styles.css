@@ -447,6 +447,37 @@ h1 {
   padding: 22px 20px;
 }
 
+.leaderboard {
+  display: flex;
+  flex-direction: column;
+}
+
+.leaderboard > .section-title-row {
+  order: 0;
+}
+
+.leaderboard > table {
+  order: 1;
+  margin-top: 4px;
+  border-radius: 14px;
+  background: rgba(255, 255, 255, 0.38);
+  box-shadow: 0 10px 24px rgba(125, 54, 87, 0.08);
+}
+
+.leaderboard > .scoring-panel {
+  order: 2;
+  margin-top: 18px;
+  margin-bottom: 0;
+  padding: 12px 14px;
+  background: rgba(255, 255, 255, 0.28);
+  box-shadow: none;
+}
+
+.leaderboard > .scoring-panel .scoring-header h4 {
+  margin-bottom: 8px;
+  font-size: 0.98rem;
+}
+
 .scoring-panel {
   margin: 0 0 20px;
   padding: 16px 16px 14px;
@@ -463,8 +494,8 @@ h1 {
 
 .scoring-list {
   display: grid;
-  gap: 10px;
-  margin: 0 0 16px;
+  gap: 7px;
+  margin: 0 0 10px;
 }
 
 .scoring-rule {
@@ -472,7 +503,7 @@ h1 {
   grid-template-columns: auto auto 1fr;
   align-items: center;
   gap: 10px;
-  padding: 8px 10px;
+  padding: 7px 9px;
   border-radius: 12px;
   background: rgba(255, 255, 255, 0.4);
   border: 1px solid rgba(150, 74, 112, 0.08);
@@ -538,14 +569,14 @@ h1 {
 }
 
 .scoring-example {
-  padding: 14px;
+  padding: 10px 12px;
   border-radius: 12px;
   background: rgba(255, 255, 255, 0.36);
   border: 1px solid rgba(141, 70, 104, 0.08);
 }
 
 .scoring-example-label {
-  margin: 0 0 10px;
+  margin: 0 0 7px;
   font-size: 11px;
   letter-spacing: 0.12em;
   text-transform: uppercase;
@@ -555,7 +586,7 @@ h1 {
 
 .point-example {
   display: grid;
-  gap: 14px;
+  gap: 10px;
 }
 
 .point-example-row {
@@ -1027,9 +1058,33 @@ tr:last-child td {
   grid-row: auto;
 }
 
+.elimination-card {
+  grid-column: 1 / -1;
+}
+
+.timeline-scroll-hint {
+  display: none;
+  margin: -8px 0 8px;
+  color: var(--muted);
+  font-size: 0.82rem;
+  font-weight: 600;
+}
+
 .admin-panel {
   grid-column: 1 / -1;
   margin-top: 4px;
+}
+
+.season-context-grid {
+  grid-column: 1 / -1;
+  display: grid;
+  grid-template-columns: minmax(0, 0.9fr) minmax(0, 1.1fr);
+  gap: 20px;
+  align-items: start;
+}
+
+.season-context-grid .feed-card {
+  min-width: 0;
 }
 
 .elimination-timeline {
@@ -1378,6 +1433,11 @@ tr:last-child td {
     grid-row: auto;
   }
 
+  .season-context-grid {
+    grid-template-columns: 1fr;
+    gap: 20px;
+  }
+
   .selection-viewer {
     overflow: visible;
   }
@@ -1705,6 +1765,10 @@ tr:last-child td {
 
   .timeline-item {
     min-width: 170px;
+  }
+
+  .timeline-scroll-hint {
+    display: block;
   }
 
   .elimination-timeline {

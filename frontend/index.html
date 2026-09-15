@@ -204,6 +204,43 @@
           </table>
         </section>
 
+        <div class="season-context-grid">
+          <section class="card feed-card elimination-card">
+            <div class="section-title-row">
+              <div>
+                <p class="eyebrow">Live updates</p>
+                <h3>Elimination timeline</h3>
+              </div>
+            </div>
+            <p class="timeline-scroll-hint">Swipe left to see the full season</p>
+            <div id="elimination-timeline" class="elimination-timeline" aria-label="Season elimination timeline" tabindex="0"></div>
+          </section>
+
+          <section class="card feed-card">
+            <div class="section-title-row">
+              <div>
+                <p class="eyebrow">See other people's picks</p>
+              </div>
+            </div>
+
+            <form id="selection-viewer-form" class="stacked-form compact-form">
+              <label>
+                Pick a name: 
+                <select id="selection-name-select">
+                  <option value="">Choose a participant</option>
+                </select>
+              </label>
+            </form>
+            <div class="selection-legend" aria-label="Scoring legend">
+              <div class="legend-item"><span class="legend-swatch legend-correct"></span>Exact</div>
+              <div class="legend-item"><span class="legend-swatch legend-partial"></span>1 off</div>
+              <div class="legend-item"><span class="legend-swatch legend-near"></span>2 off</div>
+              <div class="legend-item"><span class="legend-swatch legend-incorrect"></span>Incorrect</div>
+            </div>
+            <div id="selection-viewer" class="selection-viewer"></div>
+          </section>
+        </div>
+
         <section id="pick-sheet" class="card picks-card">
           <div class="section-title-row">
             <div>
@@ -247,47 +284,12 @@
           <div id="pick-status" class="status-text"></div>
         </section>
 
-        <section class="card feed-card">
-          <div class="section-title-row">
-            <div>
-              <p class="eyebrow">Live updates</p>
-              <h3>Elimination timeline</h3>
-            </div>
-          </div>
-          <div id="elimination-timeline" class="elimination-timeline"></div>
-        </section>
-
-        <section class="card feed-card">
-          <div class="section-title-row">
-            <div>
-              <p class="eyebrow">See other people's picks</p>
-            </div>
-          </div>
-
-          <form id="selection-viewer-form" class="stacked-form compact-form">
-            <label>
-              Pick a name: 
-              <select id="selection-name-select">
-                <option value="">Choose a participant</option>
-              </select>
-            </label>
-          </form>
-          <div class="selection-legend" aria-label="Scoring legend">
-            <div class="legend-item"><span class="legend-swatch legend-correct"></span>Exact</div>
-            <div class="legend-item"><span class="legend-swatch legend-partial"></span>1 off</div>
-            <div class="legend-item"><span class="legend-swatch legend-near"></span>2 off</div>
-            <div class="legend-item"><span class="legend-swatch legend-incorrect"></span>Incorrect</div>
-          </div>
-          <div id="selection-viewer" class="selection-viewer"></div>
-        </section>
-
         <input id="season-id-input" type="hidden" />
 
         <section id="admin" class="card feed-card admin-panel">
           <div class="section-title-row">
             <div>
               <p class="eyebrow">Admin</p>
-              <h3>Secure controls</h3>
             </div>
           </div>
 
