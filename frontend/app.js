@@ -562,9 +562,10 @@ function renderEliminationTimeline(entries) {
 
   timeline.innerHTML = entries.map((item, index) => {
     const finishPlace = Number(item.place_finished ?? item.elimination_order ?? 0);
+    const suffix = getOrdinalSuffix(finishPlace);
     return `
       <div class="timeline-item ${index === 0 ? 'timeline-item--featured' : ''}">
-        <div class="timeline-order">#${finishPlace}${getOrdinalSuffix(finishPlace)}</div>
+        <div class="timeline-order">${finishPlace}${suffix}</div>
         <div class="timeline-copy">
           <strong>${item.star_name}</strong>
           <span>with ${item.pro_name}</span>

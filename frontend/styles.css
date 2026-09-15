@@ -1021,44 +1021,26 @@ tr:last-child td {
 
 .elimination-timeline {
   position: relative;
-  display: grid;
-  gap: 10px;
-  padding-left: 18px;
-}
-
-.elimination-timeline::before {
-  content: "";
-  position: absolute;
-  left: 12px;
-  top: 8px;
-  bottom: 8px;
-  width: 2px;
-  background: linear-gradient(180deg, rgba(244, 60, 146, 0.5), rgba(255, 192, 220, 0.18));
+  display: flex;
+  gap: 12px;
+  overflow-x: auto;
+  padding: 8px 4px 10px;
+  scroll-snap-type: x proximity;
 }
 
 .timeline-item {
   position: relative;
   display: flex;
   align-items: center;
-  gap: 12px;
-  padding: 12px 14px 12px 12px;
-  border-radius: 14px;
+  gap: 10px;
+  min-width: 180px;
+  max-width: 220px;
+  padding: 12px 14px;
+  border-radius: 16px;
   background: linear-gradient(135deg, rgba(255, 255, 255, 0.64), rgba(255, 233, 240, 0.86));
   border: 1px solid rgba(168, 78, 120, 0.12);
-  margin-left: 4px;
-}
-
-.timeline-item::before {
-  content: "";
-  position: absolute;
-  left: -13px;
-  top: 50%;
-  width: 10px;
-  height: 10px;
-  border-radius: 50%;
-  background: rgba(244, 60, 146, 0.9);
-  box-shadow: 0 0 0 4px rgba(244, 60, 146, 0.12);
-  transform: translateY(-50%);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.7);
+  scroll-snap-align: start;
 }
 
 .timeline-item--featured {
@@ -1070,22 +1052,22 @@ tr:last-child td {
 .timeline-item--featured .timeline-order {
   background: rgba(200, 25, 86, 0.12);
   color: #8d1a40;
-  width: 48px;
-  height: 48px;
-  font-size: 0.82rem;
+  width: 52px;
+  height: 52px;
+  font-size: 0.8rem;
 }
 
 .timeline-order {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  width: 42px;
-  height: 42px;
+  width: 46px;
+  height: 46px;
   border-radius: 50%;
   background: rgba(244, 60, 146, 0.12);
   color: var(--pink-strong);
   font-weight: 800;
-  font-size: 0.8rem;
+  font-size: 0.78rem;
   flex-shrink: 0;
 }
 
@@ -1097,13 +1079,13 @@ tr:last-child td {
 }
 
 .timeline-copy strong {
-  font-size: 1rem;
+  font-size: 0.96rem;
   word-break: break-word;
 }
 
 .timeline-copy span {
   color: var(--muted);
-  font-size: 0.82rem;
+  font-size: 0.76rem;
 }
 
 .selection-legend {
