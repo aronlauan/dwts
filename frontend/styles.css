@@ -496,6 +496,33 @@ h1 {
   font-size: 0.98rem;
 }
 
+.leaderboard-pagination {
+  order: 1;
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 10px;
+  margin-top: 14px;
+}
+
+.leaderboard-pagination span {
+  min-width: 86px;
+  color: var(--muted);
+  font-size: 0.85rem;
+  font-weight: 700;
+  text-align: center;
+}
+
+.leaderboard-pagination .secondary-btn {
+  min-height: 36px;
+  padding: 7px 12px;
+}
+
+.leaderboard-pagination .secondary-btn:disabled {
+  cursor: not-allowed;
+  opacity: 0.45;
+}
+
 .scoring-panel {
   margin: 0 0 20px;
   padding: 16px 16px 14px;

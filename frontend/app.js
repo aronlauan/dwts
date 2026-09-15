@@ -15,6 +15,8 @@ const state = {
   draggedStar: null,
   deadline: new Date('2026-09-15T20:00:00-05:00'),
   hostMessage: '',
+  leaderboardRows: [],
+  leaderboardPage: 0,
 };
 
 function setAdminControlsVisible(isVisible) {
@@ -35,6 +37,11 @@ const rankedPairs = document.getElementById('ranked-pairs');
 const eliminationSelect = document.getElementById('elimination-select');
 const selectionNameSelect = document.getElementById('selection-name-select');
 const selectionViewer = document.getElementById('selection-viewer');
+const leaderboardPagination = document.getElementById('leaderboard-pagination');
+const leaderboardPrevious = document.getElementById('leaderboard-previous');
+const leaderboardNext = document.getElementById('leaderboard-next');
+const leaderboardPageStatus = document.getElementById('leaderboard-page-status');
+const LEADERBOARD_PAGE_SIZE = 10;
 
 function normalizeApiErrorMessage(detail) {
   if (!detail) {
@@ -499,14 +506,21 @@ async function recordElimination(event) {
 
 function renderLeaderboard(rows) {
   leaderboardTable.innerHTML = '';
+  state.leaderboardRows = rows || [];
 
-  if (!rows || rows.length === 0) {
+  if (state.leaderboardRows.length === 0) {
     leaderboardTable.innerHTML = '<tr><td colspan="4">No scores yet.</td></tr>';
     document.getElementById('current-leader').textContent = 'No picks yet';
+    if (leaderboardPagination) leaderboardPagination.classList.add('hidden');
     return;
   }
 
-  rows.forEach((entry) => {
+  const totalPages = Math.ceil(state.leaderboardRows.length / LEADERBOARD_PAGE_SIZE);
+  state.leaderboardPage = Math.min(state.leaderboardPage, totalPages - 1);
+  const firstRow = state.leaderboardPage * LEADERBOARD_PAGE_SIZE;
+  const pageRows = state.leaderboardRows.slice(firstRow, firstRow + LEADERBOARD_PAGE_SIZE);
+
+  pageRows.forEach((entry) => {
     const tr = document.createElement('tr');
     tr.innerHTML = `
       <td><span class="rank-pill">${entry.rank}</span></td>
@@ -522,8 +536,27 @@ function renderLeaderboard(rows) {
     leaderboardTable.appendChild(tr);
   });
 
-  document.getElementById('current-leader').textContent = `${rows[0].player_name} (${rows[0].points} pts)`;
-  document.getElementById('participant-count').textContent = String(rows.length);
+  document.getElementById('current-leader').textContent = `${state.leaderboardRows[0].player_name} (${state.leaderboardRows[0].points} pts)`;
+  document.getElementById('participant-count').textContent = String(state.leaderboardRows.length);
+
+  if (leaderboardPagination) {
+    leaderboardPagination.classList.toggle('hidden', totalPages <= 1);
+    if (leaderboardPageStatus) {
+      const lastRow = Math.min(firstRow + LEADERBOARD_PAGE_SIZE, state.leaderboardRows.length);
+      leaderboardPageStatus.textContent = `${firstRow + 1}-${lastRow} of ${state.leaderboardRows.length}`;
+    }
+    if (leaderboardPrevious) leaderboardPrevious.disabled = state.leaderboardPage === 0;
+    if (leaderboardNext) leaderboardNext.disabled = state.leaderboardPage === totalPages - 1;
+  }
+}
+
+function changeLeaderboardPage(direction) {
+  const totalPages = Math.ceil(state.leaderboardRows.length / LEADERBOARD_PAGE_SIZE);
+  const nextPage = state.leaderboardPage + direction;
+  if (nextPage < 0 || nextPage >= totalPages) return;
+
+  state.leaderboardPage = nextPage;
+  renderLeaderboard(state.leaderboardRows);
 }
 
 async function refreshLeaderboard() {
@@ -749,6 +782,8 @@ async function init() {
 document.getElementById('pick-form')?.addEventListener('submit', submitPicks);
 document.getElementById('reset-picks-button')?.addEventListener('click', resetPickSheet);
 document.getElementById('refresh-leaderboard')?.addEventListener('click', refreshLeaderboard);
+leaderboardPrevious?.addEventListener('click', () => changeLeaderboardPage(-1));
+leaderboardNext?.addEventListener('click', () => changeLeaderboardPage(1));
 document.getElementById('admin-login-form')?.addEventListener('submit', loginAdmin);
 document.getElementById('host-message-form')?.addEventListener('submit', updateHostMessage);
 document.getElementById('elimination-form')?.addEventListener('submit', recordElimination);
