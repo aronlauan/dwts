@@ -14,6 +14,10 @@ const state = {
   rankings: [],
   draggedStar: null,
   deadline: new Date('2026-09-15T20:00:00-04:00'),
+  premiereEpisodes: [
+    new Date('2026-09-15T20:00:00-04:00'),
+    new Date('2026-09-16T20:00:00-04:00'),
+  ],
   hostMessage: '',
   leaderboardRows: [],
   leaderboardPage: 0,
@@ -387,24 +391,48 @@ async function loginAdmin(event) {
 
 function updateCountdown() {
   const countdown = document.getElementById('countdown-text');
+  const countdownLabel = document.getElementById('countdown-label');
   const daysNode = document.getElementById('countdown-days');
   const hoursNode = document.getElementById('countdown-hours');
   const minutesNode = document.getElementById('countdown-minutes');
   const secondsNode = document.getElementById('countdown-seconds');
 
-  if (!countdown) return;
+  if (!countdown || !countdownLabel) return;
 
-  const difference = state.deadline.getTime() - Date.now();
-  if (difference <= 0) {
-    countdown.textContent = 'Selections locked — Tuesday, September 15 at 8:00 PM EDT';
-    if (daysNode) daysNode.textContent = '00';
-    if (hoursNode) hoursNode.textContent = '00';
-    if (minutesNode) minutesNode.textContent = '00';
-    if (secondsNode) secondsNode.textContent = '00';
+  const now = Date.now();
+  const deadlineDifference = state.deadline.getTime() - now;
+  if (deadlineDifference <= 0) {
     setPickSubmissionState(true);
+    updateEpisodeCountdown(now, countdownLabel, countdown, daysNode, hoursNode, minutesNode, secondsNode);
     return;
   }
 
+  renderCountdownValues(deadlineDifference, daysNode, hoursNode, minutesNode, secondsNode);
+
+  countdownLabel.textContent = 'Selection deadline';
+  countdown.textContent = 'Locking before Tuesday, September 15 at 8:00 PM EDT';
+  document.querySelector('.countdown-ticker')?.classList.remove('countdown-ticker--live');
+  setPickSubmissionState(false);
+}
+
+function getEpisodeStartForTuesday(date) {
+  const easternOffset = date.getUTCMonth() >= 10 ? '-05:00' : '-04:00';
+  return new Date(`${date.toISOString().slice(0, 10)}T20:00:00${easternOffset}`);
+}
+
+function getUpcomingEpisodes(now) {
+  const episodes = [...state.premiereEpisodes];
+  const firstRegularEpisode = new Date(Date.UTC(2026, 8, 22));
+  const lastRegularEpisode = new Date(Date.UTC(2026, 11, 1));
+
+  for (let episodeDate = firstRegularEpisode; episodeDate <= lastRegularEpisode; episodeDate = new Date(episodeDate.getTime() + 7 * 24 * 60 * 60 * 1000)) {
+    episodes.push(getEpisodeStartForTuesday(episodeDate));
+  }
+
+  return episodes.filter((episode) => episode.getTime() + 2 * 60 * 60 * 1000 > now);
+}
+
+function renderCountdownValues(difference, daysNode, hoursNode, minutesNode, secondsNode) {
   const days = Math.floor(difference / (1000 * 60 * 60 * 24));
   const hours = Math.floor((difference / (1000 * 60 * 60)) % 24);
   const minutes = Math.floor((difference / (1000 * 60)) % 60);
@@ -414,9 +442,33 @@ function updateCountdown() {
   if (hoursNode) hoursNode.textContent = String(hours).padStart(2, '0');
   if (minutesNode) minutesNode.textContent = String(minutes).padStart(2, '0');
   if (secondsNode) secondsNode.textContent = String(seconds).padStart(2, '0');
+}
 
-  countdown.textContent = 'Locking before Tuesday, September 15 at 8:00 PM EDT';
-  setPickSubmissionState(false);
+function updateEpisodeCountdown(now, label, countdown, daysNode, hoursNode, minutesNode, secondsNode) {
+  const ticker = document.querySelector('.countdown-ticker');
+  const upcomingEpisodes = getUpcomingEpisodes(now);
+  const currentOrNextEpisode = upcomingEpisodes[0];
+
+  if (!currentOrNextEpisode) {
+    label.textContent = 'Season complete';
+    countdown.textContent = 'Thanks for following along!';
+    ticker?.classList.remove('countdown-ticker--live');
+    renderCountdownValues(0, daysNode, hoursNode, minutesNode, secondsNode);
+    return;
+  }
+
+  const episodeEnds = currentOrNextEpisode.getTime() + 2 * 60 * 60 * 1000;
+  if (now >= currentOrNextEpisode.getTime() && now < episodeEnds) {
+    label.textContent = '🔴 Live Tonight';
+    countdown.textContent = 'Episode in progress 🎥';
+    ticker?.classList.add('countdown-ticker--live');
+    return;
+  }
+
+  label.textContent = 'Next episode';
+  countdown.textContent = 'Counting down to the next episode';
+  ticker?.classList.remove('countdown-ticker--live');
+  renderCountdownValues(currentOrNextEpisode.getTime() - now, daysNode, hoursNode, minutesNode, secondsNode);
 }
 
 function setPickSubmissionState(isLocked) {

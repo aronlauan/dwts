@@ -56,20 +56,16 @@
 
             <div class="countdown-ticker" aria-live="polite">
               <div class="countdown-header">
-                <span class="countdown-label">Selection deadline</span>
-                <span class="countdown-badge">EST</span>
+                <span id="countdown-label" class="countdown-label">Selection deadline</span>
+                <span class="countdown-badge">ET</span>
               </div>
               <div class="countdown-visual">
-                <div class="analog-clock" aria-hidden="true">
-                  <div class="clock-ring">
-                    <div class="clock-center">
-                      <div id="countdown-days" class="clock-value">00</div>
-                      <span>days</span>
-                    </div>
-                  </div>
-                </div>
                 <div class="countdown-readout-wrap">
                   <div class="readout-row">
+                    <div class="readout-pill">
+                      <span>Days</span>
+                      <strong id="countdown-days">00</strong>
+                    </div>
                     <div class="readout-pill">
                       <span>Hours</span>
                       <strong id="countdown-hours">00</strong>
@@ -326,6 +322,6 @@
       </main>
     </div>
 
-    <script src="app.js?v=20260915-6"></script>
+    <script src="app.js?v=20260915-8"></script>
   </body>
 </html>
