@@ -210,7 +210,7 @@ class DWTSMVPFlowTests(unittest.TestCase):
     def test_root_serves_frontend_and_health_endpoint(self):
         root_response = self.client.get("/")
         self.assertEqual(root_response.status_code, 200)
-        self.assertIn("DWTS 2026 Picks", root_response.text)
+        self.assertIn("Emma's DWTS Picks Leaderboard", root_response.text)
         self.assertIn("<html", root_response.text.lower())
 
         health_response = self.client.get("/api/health")

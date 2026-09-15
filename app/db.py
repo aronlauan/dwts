@@ -12,6 +12,12 @@ Base = declarative_base()
 def ensure_database_schema():
     if engine.dialect.name != "sqlite":
         Base.metadata.create_all(bind=engine)
+        with engine.begin() as connection:
+            connection.execute(text("CREATE INDEX IF NOT EXISTS ix_pairings_season_id ON pairings (season_id)"))
+            connection.execute(text("CREATE INDEX IF NOT EXISTS ix_pick_sheets_season_id ON pick_sheets (season_id)"))
+            connection.execute(text("CREATE INDEX IF NOT EXISTS ix_pick_entries_sheet_position ON pick_entries (pick_sheet_id, predicted_position)"))
+            connection.execute(text("CREATE INDEX IF NOT EXISTS ix_pick_entries_pairing_id ON pick_entries (pairing_id)"))
+            connection.execute(text("CREATE INDEX IF NOT EXISTS ix_eliminations_season_order ON elimination_results (season_id, elimination_order)"))
         return
 
     with engine.begin() as connection:
@@ -76,6 +82,11 @@ def ensure_database_schema():
                 "ON pick_sheets (season_id, player_name)"
             )
         )
+        connection.execute(text("CREATE INDEX IF NOT EXISTS ix_pairings_season_id ON pairings (season_id)"))
+        connection.execute(text("CREATE INDEX IF NOT EXISTS ix_pick_sheets_season_id ON pick_sheets (season_id)"))
+        connection.execute(text("CREATE INDEX IF NOT EXISTS ix_pick_entries_sheet_position ON pick_entries (pick_sheet_id, predicted_position)"))
+        connection.execute(text("CREATE INDEX IF NOT EXISTS ix_pick_entries_pairing_id ON pick_entries (pairing_id)"))
+        connection.execute(text("CREATE INDEX IF NOT EXISTS ix_eliminations_season_order ON elimination_results (season_id, elimination_order)"))
 
 
 def get_db():

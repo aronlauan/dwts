@@ -1,4 +1,4 @@
-from sqlalchemy import Column, ForeignKey, Integer, String, UniqueConstraint
+from sqlalchemy import Column, ForeignKey, Index, Integer, String, UniqueConstraint
 from sqlalchemy.orm import relationship
 
 from app.db import Base
@@ -48,6 +48,7 @@ class Pairing(Base):
 
     __table_args__ = (
         UniqueConstraint("season_id", "star_name", name="uq_pairing_season_star"),
+        Index("ix_pairings_season_id", "season_id"),
     )
 
 
@@ -65,6 +66,7 @@ class PickSheet(Base):
 
     __table_args__ = (
         UniqueConstraint("season_id", "player_name", name="uq_pick_sheet_season_name"),
+        Index("ix_pick_sheets_season_id", "season_id"),
     )
 
 
@@ -78,6 +80,11 @@ class PickEntry(Base):
 
     pick_sheet = relationship("PickSheet", back_populates="entries")
     pairing = relationship("Pairing", back_populates="pick_entries")
+
+    __table_args__ = (
+        Index("ix_pick_entries_sheet_position", "pick_sheet_id", "predicted_position"),
+        Index("ix_pick_entries_pairing_id", "pairing_id"),
+    )
 
 
 class EliminationResult(Base):
@@ -93,4 +100,5 @@ class EliminationResult(Base):
 
     __table_args__ = (
         UniqueConstraint("season_id", "pairing_id", name="uq_elimination_pairing"),
+        Index("ix_eliminations_season_order", "season_id", "elimination_order"),
     )

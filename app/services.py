@@ -188,26 +188,34 @@ def get_season_selection_views(db: Session, season_id: int):
     if season is None:
         raise ValueError("Season does not exist")
 
-    total_pairings = db.query(Pairing).filter(Pairing.season_id == season_id).count()
+    pairings = list_pairings_for_season(db, season_id)
+    pairings_by_id = {pairing.id: pairing for pairing in pairings}
+    total_pairings = len(pairings)
     actual_eliminations = {
         item.pairing_id: total_pairings - item.elimination_order + 1
         for item in db.query(EliminationResult).filter(EliminationResult.season_id == season_id).all()
     }
 
     sheets = db.query(PickSheet).filter(PickSheet.season_id == season_id).all()
+    sheet_ids = [sheet.id for sheet in sheets]
+    entries_by_sheet = {sheet_id: [] for sheet_id in sheet_ids}
+    if sheet_ids:
+        entries = (
+            db.query(PickEntry)
+            .filter(PickEntry.pick_sheet_id.in_(sheet_ids))
+            .order_by(PickEntry.pick_sheet_id.asc(), PickEntry.predicted_position.asc())
+            .all()
+        )
+        for entry in entries:
+            entries_by_sheet[entry.pick_sheet_id].append(entry)
+
     selections = []
 
     for sheet in sheets:
         ranked = {}
-        entries = (
-            db.query(PickEntry)
-            .filter(PickEntry.pick_sheet_id == sheet.id)
-            .order_by(PickEntry.predicted_position.asc())
-            .all()
-        )
 
-        for entry in entries:
-            pairing = db.query(Pairing).filter(Pairing.id == entry.pairing_id).first()
+        for entry in entries_by_sheet[sheet.id]:
+            pairing = pairings_by_id.get(entry.pairing_id)
             if pairing is None:
                 continue
 
@@ -270,20 +278,32 @@ def build_leaderboard(db: Session, season_id: int):
     standings = []
 
     total_pairings = db.query(Pairing).filter(Pairing.season_id == season_id).count()
+    actual_ranks = {
+        result.pairing_id: total_pairings - result.elimination_order + 1
+        for result in db.query(EliminationResult).filter(EliminationResult.season_id == season_id).all()
+    }
+    sheet_ids = [sheet.id for sheet in sheets]
+    entries_by_sheet = {sheet_id: [] for sheet_id in sheet_ids}
+    if sheet_ids:
+        for entry in db.query(PickEntry).filter(PickEntry.pick_sheet_id.in_(sheet_ids)).all():
+            entries_by_sheet[entry.pick_sheet_id].append(entry)
 
     for sheet in sheets:
-        points = compute_points_for_pick(db, sheet.id, season_id)
+        points = 0
         exact = 0
-        for entry in db.query(PickEntry).filter(PickEntry.pick_sheet_id == sheet.id).all():
-            actual_entry = (
-                db.query(EliminationResult)
-                .filter(EliminationResult.season_id == season_id, EliminationResult.pairing_id == entry.pairing_id)
-                .first()
-            )
-            if actual_entry:
-                actual_rank = total_pairings - actual_entry.elimination_order + 1
-                if entry.predicted_position == actual_rank:
-                    exact += 1
+        for entry in entries_by_sheet[sheet.id]:
+            actual_rank = actual_ranks.get(entry.pairing_id)
+            if actual_rank is None:
+                continue
+
+            distance = abs(entry.predicted_position - actual_rank)
+            if distance == 0:
+                points += 15
+                exact += 1
+            elif distance == 1:
+                points += 8
+            elif distance == 2:
+                points += 4
 
         standings.append(
             {
