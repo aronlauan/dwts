@@ -1,18 +1,21 @@
-from fastapi import Depends, FastAPI, Header, HTTPException
+import uuid
+
+from fastapi import Depends, FastAPI, File, Header, HTTPException, UploadFile
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import FileResponse
 from fastapi.staticfiles import StaticFiles
 from sqlalchemy.orm import Session
 
-from app.config import ADMIN_KEY, FRONTEND_DIR
+from app.config import ADMIN_KEY, ALLOWED_HIGHLIGHT_IMAGE_TYPES, FRONTEND_DIR, MAX_HIGHLIGHT_IMAGE_BYTES, UPLOADS_DIR
 from app.db import Base, ensure_database_schema, engine, get_db
 from app.models import Pairing, PickSheet, Season
-from app.schemas import AdminLogin, EliminationCreate, PairingCreate, PickSubmission, SeasonCreate, SiteMessageCreate, UserCreate
+from app.schemas import AdminLogin, EliminationCreate, HighlightYoutubeCreate, PairingCreate, PickSubmission, SeasonCreate, SiteMessageCreate, UserCreate
 from app.services import (
     authenticate_admin,
     build_leaderboard,
     create_pick_sheet,
     create_user,
+    get_highlight,
     get_season_eliminations,
     get_season_pick_averages,
     get_season_selection_views,
@@ -21,6 +24,9 @@ from app.services import (
     list_pairings_for_season,
     record_elimination,
     seed_pairings,
+    serialize_highlight,
+    update_highlight_image,
+    update_highlight_youtube,
     update_site_message,
 )
 
@@ -110,6 +116,47 @@ def update_site_message_endpoint(
     except ValueError as exc:
         raise HTTPException(status_code=400, detail=str(exc)) from exc
     return {"message": message.message}
+
+
+@app.get("/highlight")
+def get_highlight_endpoint(db: Session = Depends(get_db)):
+    return serialize_highlight(get_highlight(db))
+
+
+@app.post("/highlight/youtube")
+def set_highlight_youtube_endpoint(
+    payload: HighlightYoutubeCreate,
+    db: Session = Depends(get_db),
+    _: str = Depends(require_admin),
+):
+    try:
+        highlight = update_highlight_youtube(db, payload.youtube_url)
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
+    return serialize_highlight(highlight)
+
+
+@app.post("/highlight/image")
+async def set_highlight_image_endpoint(
+    file: UploadFile = File(...),
+    db: Session = Depends(get_db),
+    _: str = Depends(require_admin),
+):
+    if file.content_type not in ALLOWED_HIGHLIGHT_IMAGE_TYPES:
+        raise HTTPException(status_code=400, detail="Please upload a PNG, JPEG, WEBP, or GIF image")
+
+    contents = await file.read()
+    if not contents:
+        raise HTTPException(status_code=400, detail="Uploaded file is empty")
+    if len(contents) > MAX_HIGHLIGHT_IMAGE_BYTES:
+        raise HTTPException(status_code=400, detail="Image must be smaller than 5MB")
+
+    extension = ALLOWED_HIGHLIGHT_IMAGE_TYPES[file.content_type]
+    filename = f"highlight-{uuid.uuid4().hex}{extension}"
+    (UPLOADS_DIR / filename).write_bytes(contents)
+
+    highlight = update_highlight_image(db, filename)
+    return serialize_highlight(highlight)
 
 
 @app.post("/pick-sheets")

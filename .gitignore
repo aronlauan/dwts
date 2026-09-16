@@ -240,6 +240,7 @@ __pycache__/
 *.sqlite3
 .env
 .env.*
+frontend/uploads/
 
 # Build artifacts
 coverage/

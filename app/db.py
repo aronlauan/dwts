@@ -29,6 +29,8 @@ def ensure_database_schema():
             Base.metadata.create_all(bind=engine)
             return
 
+        Base.metadata.create_all(bind=engine, checkfirst=True)
+
         columns = connection.execute(text("PRAGMA table_info(pick_sheets)")).fetchall()
         column_names = {row[1] for row in columns}
         user_id_not_null = any(row[1] == "user_id" and row[3] == 1 for row in columns)

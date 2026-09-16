@@ -29,6 +29,18 @@ if front_dir:
 else:
     FRONTEND_DIR = BASE_DIR / "frontend"
 
+UPLOADS_DIR = FRONTEND_DIR / "uploads"
+UPLOADS_DIR.mkdir(parents=True, exist_ok=True)
+
+DEFAULT_HIGHLIGHT_IMAGE_URL = "dwts.webp"
+MAX_HIGHLIGHT_IMAGE_BYTES = 5 * 1024 * 1024
+ALLOWED_HIGHLIGHT_IMAGE_TYPES = {
+    "image/png": ".png",
+    "image/jpeg": ".jpg",
+    "image/webp": ".webp",
+    "image/gif": ".gif",
+}
+
 ADMIN_USERNAME = os.getenv("DWTS_ADMIN_USERNAME", "emma")
 ADMIN_PASSWORD = os.getenv("DWTS_ADMIN_PASSWORD", "admin")
 ADMIN_KEY = os.getenv("DWTS_ADMIN_KEY", "dwts-admin-dev-key")

@@ -908,9 +908,93 @@ async function updateHostMessage(event) {
   }
 }
 
+function renderHighlight(data) {
+  const container = document.getElementById('hero-highlight');
+  if (!container || !data) return;
+
+  if (data.type === 'youtube' && data.youtube_video_id) {
+    container.innerHTML = `
+      <div class="hero-highlight-video">
+        <iframe
+          src="https://www.youtube.com/embed/${data.youtube_video_id}"
+          title="Highlight from the last episode"
+          allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+          allowfullscreen
+        ></iframe>
+      </div>
+    `;
+    return;
+  }
+
+  container.innerHTML = `<img id="hero-highlight-image" src="${data.image_url || 'dwts.webp'}" alt="Highlight from the last episode" />`;
+}
+
+async function loadHighlight() {
+  try {
+    const data = await api('/highlight');
+    renderHighlight(data);
+  } catch (error) {
+    console.error('Unable to load highlight:', error);
+  }
+}
+
+function toggleHighlightFields() {
+  const isYoutube = document.getElementById('highlight-type-youtube')?.checked;
+  document.getElementById('highlight-image-field')?.classList.toggle('hidden', isYoutube);
+  document.getElementById('highlight-youtube-field')?.classList.toggle('hidden', !isYoutube);
+}
+
+async function updateHighlight(event) {
+  event.preventDefault();
+  const isYoutube = document.getElementById('highlight-type-youtube')?.checked;
+  const adminKey = state.adminKey || ADMIN_KEY;
+
+  try {
+    let data;
+    if (isYoutube) {
+      const youtubeUrl = document.getElementById('highlight-youtube-input')?.value.trim();
+      if (!youtubeUrl) {
+        updateStatus('highlight-status', 'Please enter a YouTube link.', true);
+        return;
+      }
+      data = await api('/highlight/youtube', {
+        method: 'POST',
+        headers: { 'X-Admin-Key': adminKey },
+        body: JSON.stringify({ youtube_url: youtubeUrl }),
+      });
+    } else {
+      const fileInput = document.getElementById('highlight-image-input');
+      const file = fileInput?.files?.[0];
+      if (!file) {
+        updateStatus('highlight-status', 'Please choose an image file to upload.', true);
+        return;
+      }
+      const formData = new FormData();
+      formData.append('file', file);
+      const response = await fetch(`${API_BASE}/highlight/image`, {
+        method: 'POST',
+        headers: { 'X-Admin-Key': adminKey },
+        body: formData,
+      });
+      const text = await response.text();
+      const parsed = text ? JSON.parse(text) : null;
+      if (!response.ok) {
+        throw new Error(normalizeApiErrorMessage(parsed?.detail ?? parsed));
+      }
+      data = parsed;
+    }
+
+    renderHighlight(data);
+    updateStatus('highlight-status', 'Highlight updated successfully.');
+  } catch (error) {
+    updateStatus('highlight-status', error.message, true);
+  }
+}
+
 async function init() {
   try {
     await loadHostMessage();
+    await loadHighlight();
     const seasonId = await ensureSeason();
     const hiddenSeasonInput = document.getElementById('season-id-input');
     if (hiddenSeasonInput) hiddenSeasonInput.value = String(seasonId);
@@ -930,6 +1014,9 @@ leaderboardNext?.addEventListener('click', () => changeLeaderboardPage(1));
 document.getElementById('admin-login-form')?.addEventListener('submit', loginAdmin);
 document.getElementById('host-message-form')?.addEventListener('submit', updateHostMessage);
 document.getElementById('elimination-form')?.addEventListener('submit', recordElimination);
+document.getElementById('highlight-form')?.addEventListener('submit', updateHighlight);
+document.getElementById('highlight-type-image')?.addEventListener('change', toggleHighlightFields);
+document.getElementById('highlight-type-youtube')?.addEventListener('change', toggleHighlightFields);
 selectionNameSelect?.addEventListener('change', async () => {
   const seasonId = Number(document.getElementById('season-id-input')?.value || state.seasonId || 0);
   if (!seasonId) return;

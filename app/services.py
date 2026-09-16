@@ -1,11 +1,16 @@
 import json
+import re
 from datetime import datetime, timezone
 from typing import List
 
 from sqlalchemy.orm import Session
 
-from app.config import ADMIN_PASSWORD, ADMIN_USERNAME, CAST_DATA_PATH
-from app.models import EliminationResult, Pairing, PickEntry, PickSheet, Season, SiteMessage, User
+from app.config import ADMIN_PASSWORD, ADMIN_USERNAME, CAST_DATA_PATH, DEFAULT_HIGHLIGHT_IMAGE_URL
+from app.models import EliminationResult, Highlight, Pairing, PickEntry, PickSheet, Season, SiteMessage, User
+
+YOUTUBE_VIDEO_ID_PATTERNS = [
+    r"(?:youtube\.com/watch\?v=|youtube\.com/embed/|youtu\.be/|youtube\.com/shorts/)([A-Za-z0-9_-]{11})",
+]
 
 PICK_SUBMISSION_DEADLINE = "2026-09-15T20:00:00-04:00"
 
@@ -80,6 +85,52 @@ def update_site_message(db: Session, message_text: str) -> SiteMessage:
     db.commit()
     db.refresh(message)
     return message
+
+
+def extract_youtube_video_id(url: str) -> str:
+    cleaned = (url or "").strip()
+    for pattern in YOUTUBE_VIDEO_ID_PATTERNS:
+        match = re.search(pattern, cleaned)
+        if match:
+            return match.group(1)
+    raise ValueError("Could not find a valid YouTube video in that link")
+
+
+def get_highlight(db: Session) -> Highlight:
+    highlight = db.query(Highlight).first()
+    if highlight is None:
+        highlight = Highlight(media_type="image", image_filename=None, youtube_video_id=None)
+        db.add(highlight)
+        db.commit()
+        db.refresh(highlight)
+    return highlight
+
+
+def serialize_highlight(highlight: Highlight) -> dict:
+    if highlight.media_type == "youtube" and highlight.youtube_video_id:
+        return {"type": "youtube", "youtube_video_id": highlight.youtube_video_id, "image_url": None}
+
+    image_url = f"/uploads/{highlight.image_filename}" if highlight.image_filename else f"/{DEFAULT_HIGHLIGHT_IMAGE_URL}"
+    return {"type": "image", "image_url": image_url, "youtube_video_id": None}
+
+
+def update_highlight_youtube(db: Session, youtube_url: str) -> Highlight:
+    video_id = extract_youtube_video_id(youtube_url)
+    highlight = get_highlight(db)
+    highlight.media_type = "youtube"
+    highlight.youtube_video_id = video_id
+    db.commit()
+    db.refresh(highlight)
+    return highlight
+
+
+def update_highlight_image(db: Session, filename: str) -> Highlight:
+    highlight = get_highlight(db)
+    highlight.media_type = "image"
+    highlight.image_filename = filename
+    db.commit()
+    db.refresh(highlight)
+    return highlight
 
 
 def list_pairings_for_season(db: Session, season_id: int):

@@ -34,6 +34,15 @@ class SiteMessage(Base):
     message = Column(String, nullable=False, default="Welcome to DWTS Picks!")
 
 
+class Highlight(Base):
+    __tablename__ = "highlights"
+
+    id = Column(Integer, primary_key=True, index=True)
+    media_type = Column(String, nullable=False, default="image")
+    image_filename = Column(String, nullable=True)
+    youtube_video_id = Column(String, nullable=True)
+
+
 class Pairing(Base):
     __tablename__ = "pairings"
 

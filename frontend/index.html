@@ -8,7 +8,7 @@
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
-    <link rel="stylesheet" href="styles.css?v=20260915-8" />
+    <link rel="stylesheet" href="styles.css?v=20260915-9" />
   </head>
   <body>
     <div class="page-shell">
@@ -101,7 +101,9 @@
             </div>
           </div>
           <div class="hero-visual">
-            <img src="dwts.webp" alt="DWTS promotional image" />
+            <div id="hero-highlight" class="hero-highlight">
+              <img id="hero-highlight-image" src="dwts.webp" alt="Highlight from the last episode" />
+            </div>
           </div>
         </section>
 
@@ -326,12 +328,40 @@
               <button class="primary-btn" type="submit">Save elimination</button>
             </form>
             <div id="elimination-status" class="status-text"></div>
+
+            <form id="highlight-form" class="stacked-form">
+              <p>Highlight from the last episode</p>
+              <div class="highlight-type-options">
+                <label class="highlight-type-option">
+                  <input type="radio" name="highlight-type" value="image" id="highlight-type-image" checked />
+                  Upload image
+                </label>
+                <label class="highlight-type-option">
+                  <input type="radio" name="highlight-type" value="youtube" id="highlight-type-youtube" />
+                  YouTube link
+                </label>
+              </div>
+              <div id="highlight-image-field">
+                <label>
+                  Image file
+                  <input id="highlight-image-input" type="file" accept="image/png,image/jpeg,image/webp,image/gif" />
+                </label>
+              </div>
+              <div id="highlight-youtube-field" class="hidden">
+                <label>
+                  YouTube URL
+                  <input id="highlight-youtube-input" type="url" placeholder="https://www.youtube.com/watch?v=..." />
+                </label>
+              </div>
+              <button class="primary-btn" type="submit">Save highlight</button>
+            </form>
+            <div id="highlight-status" class="status-text"></div>
           </div>
         </section>
 
       </main>
     </div>
 
-    <script src="app.js?v=20260915-11"></script>
+    <script src="app.js?v=20260915-12"></script>
   </body>
 </html>

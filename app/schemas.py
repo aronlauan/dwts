@@ -31,6 +31,10 @@ class SiteMessageCreate(BaseModel):
     message: str = Field(..., min_length=1)
 
 
+class HighlightYoutubeCreate(BaseModel):
+    youtube_url: str = Field(..., min_length=1)
+
+
 class AdminLogin(BaseModel):
     username: str
     password: str
