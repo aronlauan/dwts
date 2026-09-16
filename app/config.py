@@ -29,7 +29,15 @@ if front_dir:
 else:
     FRONTEND_DIR = BASE_DIR / "frontend"
 
-UPLOADS_DIR = FRONTEND_DIR / "uploads"
+raw_uploads_dir = os.getenv("DWTS_UPLOADS_DIR")
+if raw_uploads_dir:
+    # Point this at the same persistent volume as DWTS_DB_PATH so uploaded
+    # highlight media survives redeploys/restarts on ephemeral filesystems.
+    UPLOADS_DIR = Path(raw_uploads_dir).expanduser()
+    if not UPLOADS_DIR.is_absolute():
+        UPLOADS_DIR = (BASE_DIR / UPLOADS_DIR).resolve()
+else:
+    UPLOADS_DIR = FRONTEND_DIR / "uploads"
 UPLOADS_DIR.mkdir(parents=True, exist_ok=True)
 
 DEFAULT_HIGHLIGHT_IMAGE_URL = "dwts.webp"

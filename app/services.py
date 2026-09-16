@@ -1,5 +1,6 @@
 import json
 import re
+import uuid
 from datetime import datetime, timezone
 from typing import List
 
@@ -110,7 +111,13 @@ def serialize_highlight(highlight: Highlight) -> dict:
     if highlight.media_type == "youtube" and highlight.youtube_video_id:
         return {"type": "youtube", "youtube_video_id": highlight.youtube_video_id, "image_url": None}
 
-    image_url = f"/uploads/{highlight.image_filename}" if highlight.image_filename else f"/{DEFAULT_HIGHLIGHT_IMAGE_URL}"
+    if highlight.image_data:
+        # image_filename doubles as a cache-busting version token here, not a real path.
+        image_url = f"/highlight/image?v={highlight.image_filename}"
+    elif highlight.image_filename:
+        image_url = f"/uploads/{highlight.image_filename}"
+    else:
+        image_url = f"/{DEFAULT_HIGHLIGHT_IMAGE_URL}"
     return {"type": "image", "image_url": image_url, "youtube_video_id": None}
 
 
@@ -124,10 +131,12 @@ def update_highlight_youtube(db: Session, youtube_url: str) -> Highlight:
     return highlight
 
 
-def update_highlight_image(db: Session, filename: str) -> Highlight:
+def update_highlight_image(db: Session, content: bytes, content_type: str) -> Highlight:
     highlight = get_highlight(db)
     highlight.media_type = "image"
-    highlight.image_filename = filename
+    highlight.image_data = content
+    highlight.image_content_type = content_type
+    highlight.image_filename = uuid.uuid4().hex
     db.commit()
     db.refresh(highlight)
     return highlight

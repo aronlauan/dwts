@@ -43,7 +43,10 @@ Set these environment variables before running:
 
 ## Production Deployment
 
-For small groups of friends, deploy on Render with a persistent SQLite volume:
+For small groups of friends, deploy on Render. Render's free tier has no persistent disk, so:
+
+- Use a hosted Postgres database (e.g. [Neon](https://neon.tech)) via `DATABASE_URL` instead of SQLite — data written to local disk (including a SQLite file at the default `DWTS_DB_PATH`) is lost on every redeploy/restart on the free tier.
+- Spotlight images are uploaded and stored as bytes directly in the database (see `Highlight.image_data`), not on the local filesystem, so they persist across redeploys as long as the database itself is persistent (e.g. Neon).
 
 - **Build command:** `pip install -r requirements.txt`
 - **Start command:** `uvicorn app.main:app --host 0.0.0.0 --port $PORT`
@@ -51,6 +54,8 @@ For small groups of friends, deploy on Render with a persistent SQLite volume:
   - `DWTS_ADMIN_USERNAME`
   - `DWTS_ADMIN_PASSWORD`
   - `DWTS_ADMIN_KEY`
-  - `DWTS_DB_PATH=/data/dwts.db`
+  - `DATABASE_URL=<your Neon postgresql:// connection string>`
 
-**Important:** Keep admin credentials out of the repo and ensure the database is in a writable mounted directory.
+If you do have a persistent disk (e.g. a paid Render plan or self-hosted), you can instead use SQLite with `DWTS_DB_PATH=/data/dwts.db` pointed at the mounted volume.
+
+**Important:** Keep admin credentials out of the repo.

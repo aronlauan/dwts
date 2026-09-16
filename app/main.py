@@ -1,8 +1,6 @@
-import uuid
-
 from fastapi import Depends, FastAPI, File, Header, HTTPException, UploadFile
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import FileResponse
+from fastapi.responses import FileResponse, Response
 from fastapi.staticfiles import StaticFiles
 from sqlalchemy.orm import Session
 
@@ -123,6 +121,14 @@ def get_highlight_endpoint(db: Session = Depends(get_db)):
     return serialize_highlight(get_highlight(db))
 
 
+@app.get("/highlight/image")
+def get_highlight_image_endpoint(db: Session = Depends(get_db)):
+    highlight = get_highlight(db)
+    if not highlight.image_data:
+        raise HTTPException(status_code=404, detail="No highlight image is set")
+    return Response(content=highlight.image_data, media_type=highlight.image_content_type or "application/octet-stream")
+
+
 @app.post("/highlight/youtube")
 def set_highlight_youtube_endpoint(
     payload: HighlightYoutubeCreate,
@@ -151,11 +157,8 @@ async def set_highlight_image_endpoint(
     if len(contents) > MAX_HIGHLIGHT_IMAGE_BYTES:
         raise HTTPException(status_code=400, detail="Image must be smaller than 5MB")
 
-    extension = ALLOWED_HIGHLIGHT_IMAGE_TYPES[file.content_type]
-    filename = f"highlight-{uuid.uuid4().hex}{extension}"
-    (UPLOADS_DIR / filename).write_bytes(contents)
-
-    highlight = update_highlight_image(db, filename)
+    # Stored as bytes in the database (not on disk) so it survives redeploys on hosts without persistent disks.
+    highlight = update_highlight_image(db, contents, file.content_type)
     return serialize_highlight(highlight)
 
 
@@ -238,4 +241,5 @@ def get_eliminations(season_id: int, db: Session = Depends(get_db)):
     return eliminations
 
 
+app.mount("/uploads", StaticFiles(directory=str(UPLOADS_DIR), html=False), name="uploads")
 app.mount("/", StaticFiles(directory=str(FRONTEND_DIR), html=False), name="frontend")

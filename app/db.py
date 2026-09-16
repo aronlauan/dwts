@@ -13,6 +13,8 @@ def ensure_database_schema():
     if engine.dialect.name != "sqlite":
         Base.metadata.create_all(bind=engine)
         with engine.begin() as connection:
+            connection.execute(text("ALTER TABLE highlights ADD COLUMN IF NOT EXISTS image_data BYTEA"))
+            connection.execute(text("ALTER TABLE highlights ADD COLUMN IF NOT EXISTS image_content_type VARCHAR"))
             connection.execute(text("CREATE INDEX IF NOT EXISTS ix_pairings_season_id ON pairings (season_id)"))
             connection.execute(text("CREATE INDEX IF NOT EXISTS ix_pick_sheets_season_id ON pick_sheets (season_id)"))
             connection.execute(text("CREATE INDEX IF NOT EXISTS ix_pick_entries_sheet_position ON pick_entries (pick_sheet_id, predicted_position)"))
@@ -30,6 +32,16 @@ def ensure_database_schema():
             return
 
         Base.metadata.create_all(bind=engine, checkfirst=True)
+
+        highlight_table_exists = connection.execute(
+            text("SELECT name FROM sqlite_master WHERE type='table' AND name='highlights'")
+        ).fetchone()
+        if highlight_table_exists is not None:
+            highlight_columns = {row[1] for row in connection.execute(text("PRAGMA table_info(highlights)")).fetchall()}
+            if "image_data" not in highlight_columns:
+                connection.execute(text("ALTER TABLE highlights ADD COLUMN image_data BLOB"))
+            if "image_content_type" not in highlight_columns:
+                connection.execute(text("ALTER TABLE highlights ADD COLUMN image_content_type VARCHAR"))
 
         columns = connection.execute(text("PRAGMA table_info(pick_sheets)")).fetchall()
         column_names = {row[1] for row in columns}

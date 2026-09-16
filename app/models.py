@@ -1,4 +1,4 @@
-from sqlalchemy import Column, ForeignKey, Index, Integer, String, UniqueConstraint
+from sqlalchemy import Column, ForeignKey, Index, Integer, LargeBinary, String, UniqueConstraint
 from sqlalchemy.orm import relationship
 
 from app.db import Base
@@ -40,6 +40,8 @@ class Highlight(Base):
     id = Column(Integer, primary_key=True, index=True)
     media_type = Column(String, nullable=False, default="image")
     image_filename = Column(String, nullable=True)
+    image_data = Column(LargeBinary, nullable=True)
+    image_content_type = Column(String, nullable=True)
     youtube_video_id = Column(String, nullable=True)
 
 
