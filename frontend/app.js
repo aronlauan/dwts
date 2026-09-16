@@ -714,7 +714,9 @@ function renderEliminationTimeline(entries) {
     return;
   }
 
-  timeline.innerHTML = entries.map((item, index) => {
+  const latestFirst = [...entries].reverse();
+
+  timeline.innerHTML = latestFirst.map((item, index) => {
     const finishPlace = Number(item.place_finished ?? item.elimination_order ?? 0);
     const suffix = getOrdinalSuffix(finishPlace);
     return `
