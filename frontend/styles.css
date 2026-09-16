@@ -549,6 +549,15 @@ h1 {
   font-size: 1rem;
 }
 
+.leaderboard table th:nth-child(3),
+.leaderboard table td:nth-child(3),
+.leaderboard table th:nth-child(4),
+.leaderboard table td:nth-child(4),
+.leaderboard table th:nth-child(5),
+.leaderboard table td:nth-child(5) {
+  text-align: center;
+}
+
 .leaderboard > .scoring-panel {
   order: 2;
   margin-top: 18px;
@@ -1951,7 +1960,7 @@ tr:last-child td {
 
   .leaderboard tr {
     display: grid;
-    grid-template-columns: 40px minmax(0, 1fr) 52px 44px;
+    grid-template-columns: 34px minmax(0, 1fr) 44px 58px 38px;
     width: 100%;
   }
 
@@ -1973,7 +1982,9 @@ tr:last-child td {
   .leaderboard th:nth-child(3),
   .leaderboard td:nth-child(3),
   .leaderboard th:nth-child(4),
-  .leaderboard td:nth-child(4) {
+  .leaderboard td:nth-child(4),
+  .leaderboard th:nth-child(5),
+  .leaderboard td:nth-child(5) {
     text-align: center;
   }
 

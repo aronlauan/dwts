@@ -19,7 +19,8 @@ class DWTSMVPFlowTests(unittest.TestCase):
     def setUp(self):
         self.client = TestClient(app)
 
-    def test_full_season_flow(self):
+    @patch("app.main.is_pick_submission_locked", return_value=False)
+    def test_full_season_flow(self, mock_locked):
         season_name = f"DWTS-Test-{uuid4().hex[:8]}"
         season_response = self.client.post("/seasons/bootstrap", json={"name": season_name})
         self.assertEqual(season_response.status_code, 200)
@@ -115,6 +116,8 @@ class DWTSMVPFlowTests(unittest.TestCase):
         self.assertGreater(len(leaderboard), 0)
         self.assertEqual(leaderboard[0]["player_name"], player_name)
         self.assertGreaterEqual(leaderboard[0]["points"], 0)
+        self.assertIn("max_points", leaderboard[0])
+        self.assertIn("max_points_available", leaderboard[0])
 
         eliminations_response = self.client.get(f"/seasons/{season['id']}/eliminations")
         self.assertEqual(eliminations_response.status_code, 200)
@@ -124,7 +127,8 @@ class DWTSMVPFlowTests(unittest.TestCase):
         self.assertEqual(eliminations[0]["elimination_order"], 1)
         self.assertEqual(eliminations[0]["place_finished"], len(pairings))
 
-    def test_first_elimination_counts_as_last_place_pick(self):
+    @patch("app.main.is_pick_submission_locked", return_value=False)
+    def test_first_elimination_counts_as_last_place_pick(self, mock_locked):
         season_name = f"DWTS-Elim-{uuid4().hex[:8]}"
         season_response = self.client.post("/seasons/bootstrap", json={"name": season_name})
         self.assertEqual(season_response.status_code, 200)
@@ -160,6 +164,65 @@ class DWTSMVPFlowTests(unittest.TestCase):
         self.assertEqual(leaderboard_response.status_code, 200)
         leaderboard = leaderboard_response.json()
         self.assertEqual(leaderboard[0]["points"], 15)
+        self.assertEqual(leaderboard[0]["exact"], 1)
+        # 15 from first elimination + (len(pairings)-1)*15 from remaining = len(pairings)*15
+        self.assertEqual(leaderboard[0]["max_points_available"], len(pairings) * 15)
+
+    @patch("app.main.is_pick_submission_locked", return_value=False)
+    def test_max_points_available_after_eliminations(self, mock_locked):
+        season_name = f"DWTS-MaxPts-{uuid4().hex[:8]}"
+        season_response = self.client.post("/seasons/bootstrap", json={"name": season_name})
+        self.assertEqual(season_response.status_code, 200)
+        season_id = season_response.json()["id"]
+
+        pairings_response = self.client.get(f"/seasons/{season_id}/pairings")
+        pairings = pairings_response.json()
+        n = len(pairings)
+        star_names = [p["star_name"] for p in pairings]
+
+        # Sheet 1: predicts [0, 1, 2, ..., n-1] in 1st, 2nd, ..., nth place
+        self.client.post(
+            "/pick-sheets",
+            json={"name": "PlayerForward", "season_id": season_id, "predictions": star_names},
+        )
+        # Sheet 2: predicts reverse [n-1, ..., 0]
+        self.client.post(
+            "/pick-sheets",
+            json={"name": "PlayerReverse", "season_id": season_id, "predictions": list(reversed(star_names))},
+        )
+
+        # Before any eliminations: both players can potentially score n * 15 points
+        lb_response = self.client.get(f"/leaderboard/{season_id}")
+        lb = {row["player_name"]: row for row in lb_response.json()}
+        self.assertEqual(lb["PlayerForward"]["points"], 0)
+        self.assertEqual(lb["PlayerForward"]["max_points_available"], n * 15)
+        self.assertEqual(lb["PlayerReverse"]["points"], 0)
+        self.assertEqual(lb["PlayerReverse"]["max_points_available"], n * 15)
+
+        # Eliminate star_names[0] (first eliminated = nth place)
+        # PlayerForward predicted star_names[0] at position 1 (finished n-th, distance n-1 >= 3 => 0 pts).
+        # PlayerReverse predicted star_names[0] at position n (finished n-th, distance 0 => 15 pts, Exact=1).
+        self.client.post(
+            "/eliminations",
+            json={"season_id": season_id, "star_name": star_names[0]},
+            headers={"X-Admin-Key": "dwts-admin-dev-key"},
+        )
+
+        lb_response = self.client.get(f"/leaderboard/{season_id}")
+        lb = {row["player_name"]: row for row in lb_response.json()}
+
+        # PlayerReverse got 15 points and can still get remaining (n-1)*15 => total n*15
+        self.assertEqual(lb["PlayerReverse"]["points"], 15)
+        self.assertEqual(lb["PlayerReverse"]["exact"], 1)
+        self.assertEqual(lb["PlayerReverse"]["max_points_available"], n * 15)
+
+        # PlayerForward got 0 points on star_names[0].
+        # PlayerForward's remaining predictions are positions 2..n for stars 1..n-1.
+        # But available ranks are 1..n-1. Rank n is gone!
+        # PlayerForward's max available must be strictly less than n * 15.
+        self.assertEqual(lb["PlayerForward"]["points"], 0)
+        self.assertEqual(lb["PlayerForward"]["exact"], 0)
+        self.assertLess(lb["PlayerForward"]["max_points_available"], n * 15)
 
     def test_pick_submission_is_rejected_after_deadline(self):
         season_response = self.client.post(

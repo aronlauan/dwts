@@ -624,7 +624,7 @@ function renderLeaderboard(rows) {
   state.leaderboardRows = rows || [];
 
   if (state.leaderboardRows.length === 0) {
-    leaderboardTable.innerHTML = '<tr><td colspan="4">No scores yet.</td></tr>';
+    leaderboardTable.innerHTML = '<tr><td colspan="5">No scores yet.</td></tr>';
     document.getElementById('current-leader').textContent = 'No picks yet';
     if (leaderboardPagination) leaderboardPagination.classList.add('hidden');
     return;
@@ -646,6 +646,7 @@ function renderLeaderboard(rows) {
         </div>
       </td>
       <td>${entry.points}</td>
+      <td>${entry.max_points_available ?? entry.max_points ?? '-'}</td>
       <td>${entry.exact}</td>
     `;
     leaderboardTable.appendChild(tr);

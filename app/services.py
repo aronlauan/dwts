@@ -220,6 +220,130 @@ def record_elimination(db: Session, season_id: int, star_name: str) -> Eliminati
     return result
 
 
+def compute_score_for_distance(distance: int) -> int:
+    if distance == 0:
+        return 15
+    elif distance == 1:
+        return 8
+    elif distance == 2:
+        return 4
+    return 0
+
+
+def solve_max_weight_assignment(weights: List[List[int]]) -> int:
+    """
+    Finds the maximum weight matching in a bipartite graph represented by
+    an m x n weight matrix using the Hungarian algorithm (Kuhn-Munkres).
+    Handles non-square matrices by zero-padding.
+    """
+    if not weights or not weights[0]:
+        return 0
+    nrows = len(weights)
+    ncols = len(weights[0])
+    n = max(nrows, ncols)
+    if n == 0:
+        return 0
+    if n == 1:
+        return weights[0][0] if nrows > 0 and ncols > 0 else 0
+
+    max_w = max((max(row) for row in weights), default=0)
+    cost = [[0] * (n + 1) for _ in range(n + 1)]
+    for i in range(n):
+        for j in range(n):
+            val = weights[i][j] if (i < nrows and j < ncols) else 0
+            cost[i + 1][j + 1] = max_w - val
+
+    u = [0] * (n + 1)
+    v = [0] * (n + 1)
+    p = [0] * (n + 1)
+    way = [0] * (n + 1)
+
+    for i in range(1, n + 1):
+        p[0] = i
+        j0 = 0
+        minv = [float("inf")] * (n + 1)
+        used = [False] * (n + 1)
+        while True:
+            used[j0] = True
+            i0 = p[j0]
+            delta = float("inf")
+            j1 = 0
+            for j in range(1, n + 1):
+                if not used[j]:
+                    cur = cost[i0][j] - u[i0] - v[j]
+                    if cur < minv[j]:
+                        minv[j] = cur
+                        way[j] = j0
+                    if minv[j] < delta:
+                        delta = minv[j]
+                        j1 = j
+            for j in range(0, n + 1):
+                if used[j]:
+                    u[p[j]] += delta
+                    v[j] -= delta
+                else:
+                    minv[j] -= delta
+            j0 = j1
+            if p[j0] == 0:
+                break
+        while True:
+            j1 = way[j0]
+            p[j0] = p[j1]
+            j0 = j1
+            if j0 == 0:
+                break
+
+    total_weight = 0
+    for j in range(1, n + 1):
+        row = p[j] - 1
+        col = j - 1
+        if row < nrows and col < ncols:
+            total_weight += weights[row][col]
+    return total_weight
+
+
+def compute_max_points_for_sheet(
+    entries: List[PickEntry],
+    actual_ranks: dict,
+    total_pairings: int,
+) -> tuple[int, int, int]:
+    """
+    Computes (current_points, exact_matches, max_points_available) for a pick sheet.
+    Accounts for already eliminated pairings and calculates the maximum possible points
+    achievable across all valid permutations of remaining ranks for remaining pairings.
+    """
+    points = 0
+    exact = 0
+    active_entries: List[PickEntry] = []
+    eliminated_ranks = set(actual_ranks.values())
+    available_ranks = [r for r in range(1, total_pairings + 1) if r not in eliminated_ranks]
+
+    for entry in entries:
+        actual_rank = actual_ranks.get(entry.pairing_id)
+        if actual_rank is not None:
+            distance = abs(entry.predicted_position - actual_rank)
+            score = compute_score_for_distance(distance)
+            points += score
+            if distance == 0:
+                exact += 1
+        else:
+            active_entries.append(entry)
+
+    if not active_entries or not available_ranks:
+        max_remaining = 0
+    else:
+        weights = []
+        for entry in active_entries:
+            row = []
+            for rank in available_ranks:
+                dist = abs(entry.predicted_position - rank)
+                row.append(compute_score_for_distance(dist))
+            weights.append(row)
+        max_remaining = solve_max_weight_assignment(weights)
+
+    return points, exact, points + max_remaining
+
+
 def compute_points_for_pick(db: Session, pick_sheet_id: int, season_id: int) -> int:
     picks = db.query(PickEntry).filter(PickEntry.pick_sheet_id == pick_sheet_id).all()
     total_pairings = db.query(Pairing).filter(Pairing.season_id == season_id).count()
@@ -227,20 +351,19 @@ def compute_points_for_pick(db: Session, pick_sheet_id: int, season_id: int) -> 
         entry.pairing_id: total_pairings - entry.elimination_order + 1
         for entry in db.query(EliminationResult).filter(EliminationResult.season_id == season_id).all()
     }
+    points, _, _ = compute_max_points_for_sheet(picks, actuals, total_pairings)
+    return points
 
-    total = 0
-    for pick in picks:
-        real_order = actuals.get(pick.pairing_id)
-        if real_order is None:
-            continue
-        distance = abs(pick.predicted_position - real_order)
-        if distance == 0:
-            total += 15
-        elif distance == 1:
-            total += 8
-        elif distance == 2:
-            total += 4
-    return total
+
+def compute_max_points_for_pick(db: Session, pick_sheet_id: int, season_id: int) -> int:
+    picks = db.query(PickEntry).filter(PickEntry.pick_sheet_id == pick_sheet_id).all()
+    total_pairings = db.query(Pairing).filter(Pairing.season_id == season_id).count()
+    actuals = {
+        entry.pairing_id: total_pairings - entry.elimination_order + 1
+        for entry in db.query(EliminationResult).filter(EliminationResult.season_id == season_id).all()
+    }
+    _, _, max_points = compute_max_points_for_sheet(picks, actuals, total_pairings)
+    return max_points
 
 
 def get_season_selection_views(db: Session, season_id: int):
@@ -380,21 +503,12 @@ def build_leaderboard(db: Session, season_id: int):
             entries_by_sheet[entry.pick_sheet_id].append(entry)
 
     for sheet in sheets:
-        points = 0
-        exact = 0
-        for entry in entries_by_sheet[sheet.id]:
-            actual_rank = actual_ranks.get(entry.pairing_id)
-            if actual_rank is None:
-                continue
-
-            distance = abs(entry.predicted_position - actual_rank)
-            if distance == 0:
-                points += 15
-                exact += 1
-            elif distance == 1:
-                points += 8
-            elif distance == 2:
-                points += 4
+        sheet_entries = entries_by_sheet.get(sheet.id, [])
+        points, exact, max_points = compute_max_points_for_sheet(
+            entries=sheet_entries,
+            actual_ranks=actual_ranks,
+            total_pairings=total_pairings,
+        )
 
         standings.append(
             {
@@ -402,10 +516,12 @@ def build_leaderboard(db: Session, season_id: int):
                 "player_name": sheet.player_name,
                 "points": points,
                 "exact": exact,
+                "max_points": max_points,
+                "max_points_available": max_points,
             }
         )
 
-    standings.sort(key=lambda item: (-item["points"], -item["exact"], item["player_name"]))
+    standings.sort(key=lambda item: (-item["points"], -item["exact"], -item["max_points"], item["player_name"]))
     for index, item in enumerate(standings, start=1):
         item["rank"] = index
     return standings
