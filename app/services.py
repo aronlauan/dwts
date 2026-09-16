@@ -220,14 +220,34 @@ def record_elimination(db: Session, season_id: int, star_name: str) -> Eliminati
     return result
 
 
-def compute_score_for_distance(distance: int) -> int:
+def get_rank_multiplier(actual_rank: int) -> float:
+    """
+    Tier-based multipliers:
+    - Finals / Podium (Places 1-3): 2.0x
+    - Semifinals (Places 4-6): 1.5x
+    - Places 7+: 1.0x (Preserves base scoring for initial & mid eliminations)
+    """
+    if actual_rank <= 3:
+        return 2.0
+    elif actual_rank <= 6:
+        return 1.5
+    return 1.0
+
+
+def compute_score_for_distance(distance: int, actual_rank: int = 7) -> int:
     if distance == 0:
-        return 15
+        base = 15
     elif distance == 1:
-        return 8
+        base = 8
     elif distance == 2:
-        return 4
-    return 0
+        base = 4
+    else:
+        return 0
+    return round(base * get_rank_multiplier(actual_rank))
+
+
+def compute_score_for_pick(predicted_position: int, actual_rank: int) -> int:
+    return compute_score_for_distance(abs(predicted_position - actual_rank), actual_rank)
 
 
 def solve_max_weight_assignment(weights: List[List[int]]) -> int:
@@ -309,7 +329,8 @@ def compute_max_points_for_sheet(
 ) -> tuple[int, int, int]:
     """
     Computes (current_points, exact_matches, max_points_available) for a pick sheet.
-    Accounts for already eliminated pairings and calculates the maximum possible points
+    Accounts for already eliminated pairings with tier-weighted scoring (places 1-3 at 2.0x,
+    places 4-6 at 1.5x, places 7+ at 1.0x) and calculates the maximum possible points
     achievable across all valid permutations of remaining ranks for remaining pairings.
     """
     points = 0
@@ -322,7 +343,7 @@ def compute_max_points_for_sheet(
         actual_rank = actual_ranks.get(entry.pairing_id)
         if actual_rank is not None:
             distance = abs(entry.predicted_position - actual_rank)
-            score = compute_score_for_distance(distance)
+            score = compute_score_for_pick(entry.predicted_position, actual_rank)
             points += score
             if distance == 0:
                 exact += 1
@@ -336,8 +357,8 @@ def compute_max_points_for_sheet(
         for entry in active_entries:
             row = []
             for rank in available_ranks:
-                dist = abs(entry.predicted_position - rank)
-                row.append(compute_score_for_distance(dist))
+                score = compute_score_for_pick(entry.predicted_position, rank)
+                row.append(score)
             weights.append(row)
         max_remaining = solve_max_weight_assignment(weights)
 

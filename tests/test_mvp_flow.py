@@ -165,8 +165,9 @@ class DWTSMVPFlowTests(unittest.TestCase):
         leaderboard = leaderboard_response.json()
         self.assertEqual(leaderboard[0]["points"], 15)
         self.assertEqual(leaderboard[0]["exact"], 1)
-        # 15 from first elimination + (len(pairings)-1)*15 from remaining = len(pairings)*15
-        self.assertEqual(leaderboard[0]["max_points_available"], len(pairings) * 15)
+        # 15 from first elimination (rank n @ 1.0x) + remaining max
+        expected_max = (3 * 30) + (3 * 22) + ((len(pairings) - 6) * 15)
+        self.assertEqual(leaderboard[0]["max_points_available"], expected_max)
 
     @patch("app.main.is_pick_submission_locked", return_value=False)
     def test_max_points_available_after_eliminations(self, mock_locked):
@@ -179,6 +180,7 @@ class DWTSMVPFlowTests(unittest.TestCase):
         pairings = pairings_response.json()
         n = len(pairings)
         star_names = [p["star_name"] for p in pairings]
+        expected_perfect_score = (3 * 30) + (3 * 22) + ((n - 6) * 15)
 
         # Sheet 1: predicts [0, 1, 2, ..., n-1] in 1st, 2nd, ..., nth place
         self.client.post(
@@ -191,17 +193,17 @@ class DWTSMVPFlowTests(unittest.TestCase):
             json={"name": "PlayerReverse", "season_id": season_id, "predictions": list(reversed(star_names))},
         )
 
-        # Before any eliminations: both players can potentially score n * 15 points
+        # Before any eliminations: both players can potentially score the perfect score
         lb_response = self.client.get(f"/leaderboard/{season_id}")
         lb = {row["player_name"]: row for row in lb_response.json()}
         self.assertEqual(lb["PlayerForward"]["points"], 0)
-        self.assertEqual(lb["PlayerForward"]["max_points_available"], n * 15)
+        self.assertEqual(lb["PlayerForward"]["max_points_available"], expected_perfect_score)
         self.assertEqual(lb["PlayerReverse"]["points"], 0)
-        self.assertEqual(lb["PlayerReverse"]["max_points_available"], n * 15)
+        self.assertEqual(lb["PlayerReverse"]["max_points_available"], expected_perfect_score)
 
         # Eliminate star_names[0] (first eliminated = nth place)
         # PlayerForward predicted star_names[0] at position 1 (finished n-th, distance n-1 >= 3 => 0 pts).
-        # PlayerReverse predicted star_names[0] at position n (finished n-th, distance 0 => 15 pts, Exact=1).
+        # PlayerReverse predicted star_names[0] at position n (finished n-th, distance 0 => 15 pts @ 1.0x, Exact=1).
         self.client.post(
             "/eliminations",
             json={"season_id": season_id, "star_name": star_names[0]},
@@ -211,18 +213,18 @@ class DWTSMVPFlowTests(unittest.TestCase):
         lb_response = self.client.get(f"/leaderboard/{season_id}")
         lb = {row["player_name"]: row for row in lb_response.json()}
 
-        # PlayerReverse got 15 points and can still get remaining (n-1)*15 => total n*15
+        # PlayerReverse got 15 points and can still get remaining places exact => total perfect score
         self.assertEqual(lb["PlayerReverse"]["points"], 15)
         self.assertEqual(lb["PlayerReverse"]["exact"], 1)
-        self.assertEqual(lb["PlayerReverse"]["max_points_available"], n * 15)
+        self.assertEqual(lb["PlayerReverse"]["max_points_available"], expected_perfect_score)
 
         # PlayerForward got 0 points on star_names[0].
         # PlayerForward's remaining predictions are positions 2..n for stars 1..n-1.
         # But available ranks are 1..n-1. Rank n is gone!
-        # PlayerForward's max available must be strictly less than n * 15.
+        # PlayerForward's max available must be strictly less than perfect score.
         self.assertEqual(lb["PlayerForward"]["points"], 0)
         self.assertEqual(lb["PlayerForward"]["exact"], 0)
-        self.assertLess(lb["PlayerForward"]["max_points_available"], n * 15)
+        self.assertLess(lb["PlayerForward"]["max_points_available"], expected_perfect_score)
 
     def test_pick_submission_is_rejected_after_deadline(self):
         season_response = self.client.post(

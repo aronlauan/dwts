@@ -9,11 +9,23 @@ from app.services import (
 
 class MaxPointsCalculationTests(unittest.TestCase):
     def test_score_for_distance(self):
-        self.assertEqual(compute_score_for_distance(0), 15)
-        self.assertEqual(compute_score_for_distance(1), 8)
-        self.assertEqual(compute_score_for_distance(2), 4)
-        self.assertEqual(compute_score_for_distance(3), 0)
-        self.assertEqual(compute_score_for_distance(10), 0)
+        # Default / places 7+ (1.0x)
+        self.assertEqual(compute_score_for_distance(0, actual_rank=7), 15)
+        self.assertEqual(compute_score_for_distance(1, actual_rank=8), 8)
+        self.assertEqual(compute_score_for_distance(2, actual_rank=9), 4)
+        self.assertEqual(compute_score_for_distance(3, actual_rank=10), 0)
+
+        # Finals / Podium places 1-3 (2.0x)
+        self.assertEqual(compute_score_for_distance(0, actual_rank=1), 30)
+        self.assertEqual(compute_score_for_distance(1, actual_rank=2), 16)
+        self.assertEqual(compute_score_for_distance(2, actual_rank=3), 8)
+        self.assertEqual(compute_score_for_distance(3, actual_rank=1), 0)
+
+        # Semifinals places 4-6 (1.5x)
+        self.assertEqual(compute_score_for_distance(0, actual_rank=4), 22)
+        self.assertEqual(compute_score_for_distance(1, actual_rank=5), 12)
+        self.assertEqual(compute_score_for_distance(2, actual_rank=6), 6)
+        self.assertEqual(compute_score_for_distance(3, actual_rank=5), 0)
 
     def test_solve_max_weight_assignment_empty_and_trivial(self):
         self.assertEqual(solve_max_weight_assignment([]), 0)
@@ -30,7 +42,7 @@ class MaxPointsCalculationTests(unittest.TestCase):
         self.assertEqual(solve_max_weight_assignment(weights), 23)
 
     def test_no_eliminations_gives_max_possible_points(self):
-        # 5 pairings, none eliminated
+        # 5 pairings (places 1, 2, 3 @ 2.0x = 30 each, places 4, 5 @ 1.5x = 22 each)
         entries = [
             PickEntry(pairing_id=1, predicted_position=1),
             PickEntry(pairing_id=2, predicted_position=2),
@@ -43,13 +55,13 @@ class MaxPointsCalculationTests(unittest.TestCase):
         points, exact, max_pts = compute_max_points_for_sheet(entries, actual_ranks, total_pairings)
         self.assertEqual(points, 0)
         self.assertEqual(exact, 0)
-        self.assertEqual(max_pts, 5 * 15)
+        self.assertEqual(max_pts, (3 * 30) + (2 * 22))
 
     def test_all_eliminations_max_equals_current(self):
-        # 3 pairings, all eliminated
-        # Pairing 1 predicted 1, finished 1 (Exact: 15)
-        # Pairing 2 predicted 2, finished 3 (1 off: 8)
-        # Pairing 3 predicted 3, finished 2 (1 off: 8)
+        # 3 pairings, all eliminated (places 1, 2, 3 @ 2.0x)
+        # Pairing 1 predicted 1, finished 1 (Exact: 30)
+        # Pairing 2 predicted 2, finished 3 (1 off: 16)
+        # Pairing 3 predicted 3, finished 2 (1 off: 16)
         entries = [
             PickEntry(pairing_id=1, predicted_position=1),
             PickEntry(pairing_id=2, predicted_position=2),
@@ -58,7 +70,7 @@ class MaxPointsCalculationTests(unittest.TestCase):
         actual_ranks = {1: 1, 2: 3, 3: 2}
         total_pairings = 3
         points, exact, max_pts = compute_max_points_for_sheet(entries, actual_ranks, total_pairings)
-        self.assertEqual(points, 15 + 8 + 8)
+        self.assertEqual(points, 30 + 16 + 16)
         self.assertEqual(exact, 1)
         self.assertEqual(max_pts, points)
 
@@ -71,12 +83,12 @@ class MaxPointsCalculationTests(unittest.TestCase):
         # Pairing 1 was eliminated first, finishing in 4th place.
         # Fixed score for Pairing 1: |1 - 4| = 3 -> 0 pts
         # Eliminated ranks: {4}
-        # Remaining available ranks: {1, 2, 3}
+        # Remaining available ranks: {1, 2, 3} (all in 2.0x tier)
         # Active entries: Pairing 2 (pred 2), Pairing 3 (pred 3), Pairing 4 (pred 4)
-        # For Pairing 2: can match rank 2 (15 pts)
-        # For Pairing 3: can match rank 3 (15 pts)
+        # For Pairing 2: can match rank 2 (30 pts)
+        # For Pairing 3: can match rank 3 (30 pts)
         # For Pairing 4: rank 4 is taken! Can only take rank 1 (dist 3 -> 0 pts)
-        # Total max points = 0 + (15 + 15 + 0) = 30
+        # Total max points = 0 + (30 + 30 + 0) = 60
         entries = [
             PickEntry(pairing_id=1, predicted_position=1),
             PickEntry(pairing_id=2, predicted_position=2),
@@ -88,7 +100,7 @@ class MaxPointsCalculationTests(unittest.TestCase):
         points, exact, max_pts = compute_max_points_for_sheet(entries, actual_ranks, total_pairings)
         self.assertEqual(points, 0)
         self.assertEqual(exact, 0)
-        self.assertEqual(max_pts, 30)
+        self.assertEqual(max_pts, 60)
 
 
 if __name__ == "__main__":
