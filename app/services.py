@@ -223,11 +223,14 @@ def record_elimination(db: Session, season_id: int, star_name: str) -> Eliminati
 def get_rank_multiplier(actual_rank: int) -> float:
     """
     Tier-based multipliers:
-    - Finals / Podium (Places 1-3): 2.0x
+    - Winner (1st Place): 3.0x
+    - Podium (Places 2 and 3): 2.0x
     - Semifinals (Places 4-6): 1.5x
     - Places 7+: 1.0x (Preserves base scoring for initial & mid eliminations)
     """
-    if actual_rank <= 3:
+    if actual_rank == 1:
+        return 3.0
+    elif actual_rank <= 3:
         return 2.0
     elif actual_rank <= 6:
         return 1.5
@@ -329,9 +332,10 @@ def compute_max_points_for_sheet(
 ) -> tuple[int, int, int]:
     """
     Computes (current_points, exact_matches, max_points_available) for a pick sheet.
-    Accounts for already eliminated pairings with tier-weighted scoring (places 1-3 at 2.0x,
-    places 4-6 at 1.5x, places 7+ at 1.0x) and calculates the maximum possible points
-    achievable across all valid permutations of remaining ranks for remaining pairings.
+    Accounts for already eliminated pairings with tier-weighted scoring (1st place at 3.0x,
+    places 2-3 at 2.0x, places 4-6 at 1.5x, places 7+ at 1.0x) and calculates the maximum
+    possible points achievable across all valid permutations of remaining ranks for
+    remaining pairings.
     """
     points = 0
     exact = 0
