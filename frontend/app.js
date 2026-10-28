@@ -418,7 +418,7 @@ function updateCountdown() {
   setPickSubmissionState(false);
 }
 
-function getEpisodeStartForTuesday(date) {
+function getEpisodeStart(date) {
   const easternOffset = date.getUTCMonth() >= 10 ? '-05:00' : '-04:00';
   return new Date(`${date.toISOString().slice(0, 10)}T20:00:00${easternOffset}`);
 }
@@ -429,7 +429,10 @@ function getUpcomingEpisodes(now) {
   const lastRegularEpisode = new Date(Date.UTC(2026, 11, 1));
 
   for (let episodeDate = firstRegularEpisode; episodeDate <= lastRegularEpisode; episodeDate = new Date(episodeDate.getTime() + 7 * 24 * 60 * 60 * 1000)) {
-    episodes.push(getEpisodeStartForTuesday(episodeDate));
+    const episodeStartDate = episodeDate.getTime() === Date.UTC(2026, 10, 3)
+      ? new Date(Date.UTC(2026, 10, 2))
+      : episodeDate;
+    episodes.push(getEpisodeStart(episodeStartDate));
   }
 
   return episodes.filter((episode) => episode.getTime() + 2 * 60 * 60 * 1000 > now);
