@@ -742,10 +742,68 @@ async function refreshEliminationTimeline() {
   try {
     const items = await api(`/seasons/${seasonId}/eliminations`);
     renderEliminationTimeline(items);
+    renderWinnersCircle(items);
   } catch (error) {
     console.error(error);
     renderEliminationTimeline([]);
+    renderWinnersCircle([]);
   }
+}
+
+function escapeHtml(value) {
+  return String(value ?? '').replace(/[&<>"']/g, (char) => ({
+    '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;',
+  }[char]));
+}
+
+// The season is over once every pairing (including the winner) has a recorded result.
+function renderWinnersCircle(eliminations) {
+  const section = document.getElementById('winners-circle');
+  if (!section) return;
+
+  const rows = state.leaderboardRows || [];
+  const totalPairings = state.pairings.length;
+  const isComplete = totalPairings > 0 && (eliminations || []).length >= totalPairings && rows.length > 0;
+  section.classList.toggle('hidden', !isComplete);
+  if (!isComplete) return;
+
+  const champion = eliminations.find((item) => Number(item.place_finished) === 1);
+  document.getElementById('winners-circle-champion').textContent = champion
+    ? `${champion.star_name} & ${champion.pro_name} took home the mirrorball. Here's who called it best.`
+    : '';
+
+  // Podium order on screen: 2nd, 1st, 3rd.
+  const podium = [rows[1], rows[0], rows[2]]
+    .map((entry, index) => ({ entry, place: [2, 1, 3][index] }))
+    .filter(({ entry }) => entry);
+  document.getElementById('winners-podium').innerHTML = podium.map(({ entry, place }) => `
+    <div class="podium-spot podium-spot--${place}">
+      <div class="podium-player">
+        <div class="podium-beam" aria-hidden="true"></div>
+        <strong class="podium-name">${escapeHtml(entry.player_name)}</strong>
+        <span class="podium-points">${entry.points} pts · ${entry.exact} exact</span>
+      </div>
+      <div class="podium-riser">
+        <span class="podium-place">${place}<sup>${getOrdinalSuffix(place)}</sup></span>
+      </div>
+    </div>
+  `).join('');
+
+  // Places 4–6 stand nearest the stage; 7–10 fill the front of the floor.
+  const runnersUp = rows.slice(3, 10).map((entry, index) => ({ entry, place: index + 4 }));
+  const floorRows = [runnersUp.slice(0, 3), runnersUp.slice(3)].filter((row) => row.length);
+  document.getElementById('winners-runners-up-block').classList.toggle('hidden', runnersUp.length === 0);
+  document.getElementById('winners-runners-up').innerHTML = floorRows.map((row, rowIndex) => `
+    <ol class="floor-row floor-row--${rowIndex === 0 ? 'back' : 'front'}" start="${row[0].place}">
+      ${row.map(({ entry, place }) => `
+        <li class="floor-mark">
+          <span class="floor-place">${place}<sup>${getOrdinalSuffix(place)}</sup></span>
+          <span class="floor-name">${escapeHtml(entry.player_name)}</span>
+          <span class="floor-points">${entry.points} pts</span>
+        </li>
+      `).join('')}
+    </ol>
+  `).join('');
 }
 
 function renderSelectionViewer(entries) {
