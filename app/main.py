@@ -288,7 +288,7 @@ def get_chat(after: int = 0, db: Session = Depends(get_db)):
 @app.post("/chat")
 def post_chat(payload: ChatMessageCreate, request: Request, db: Session = Depends(get_db)):
     if not is_chat_window_open():
-        raise HTTPException(status_code=403, detail="Live chat is only open during the finale (8-11 PM ET).")
+        raise HTTPException(status_code=403, detail="Live chat is only open during the finale (8-11:30 PM ET).")
     if not get_chat_setting(db).enabled:
         raise HTTPException(status_code=403, detail="Live chat has been closed by the host.")
 
