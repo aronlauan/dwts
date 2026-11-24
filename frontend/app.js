@@ -1227,7 +1227,7 @@ function renderChatAdmin() {
   const stateText = document.getElementById('chat-admin-state');
   const button = document.getElementById('chat-toggle-button');
   if (!stateText || !button) return;
-  const windowLabel = chat.open ? 'Finale window is open.' : 'Outside the 8–11 PM ET window.';
+  const windowLabel = chat.open ? 'Finale window is open.' : 'Outside the 8–11:30 PM ET window.';
   stateText.textContent = `${chat.enabled ? 'Chat is ON.' : 'Chat is SHUT DOWN.'} ${windowLabel}`;
   button.textContent = chat.enabled ? 'Shut down chat' : 'Reopen chat';
   button.classList.toggle('primary-btn', !chat.enabled);
