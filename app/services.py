@@ -7,13 +7,20 @@ from typing import List
 from sqlalchemy.orm import Session
 
 from app.config import ADMIN_PASSWORD, ADMIN_USERNAME, CAST_DATA_PATH, DEFAULT_HIGHLIGHT_IMAGE_URL
-from app.models import EliminationResult, Highlight, Pairing, PickEntry, PickSheet, Season, SiteMessage, User
+from app.models import ChatMessage, ChatSetting, EliminationResult, Highlight, Pairing, PickEntry, PickSheet, Season, SiteMessage, User
 
 YOUTUBE_VIDEO_ID_PATTERNS = [
     r"(?:youtube\.com/watch\?v=|youtube\.com/embed/|youtu\.be/|youtube\.com/shorts/)([A-Za-z0-9_-]{11})",
 ]
 
 PICK_SUBMISSION_DEADLINE = "2026-09-15T20:00:00-04:00"
+
+# Finale live chat window (hard-coded like the pick deadline; update by hand).
+CHAT_WINDOW_START = "2026-11-24T20:00:00-05:00"
+CHAT_WINDOW_END = "2026-11-24T23:00:00-05:00"
+CHAT_NAME_MAX_LENGTH = 30
+CHAT_BODY_MAX_LENGTH = 300
+CHAT_HISTORY_LIMIT = 100
 
 
 def is_pick_submission_locked() -> bool:
@@ -550,3 +557,76 @@ def build_leaderboard(db: Session, season_id: int):
     for index, item in enumerate(standings, start=1):
         item["rank"] = index
     return standings
+
+
+def is_chat_window_open() -> bool:
+    start = datetime.fromisoformat(CHAT_WINDOW_START)
+    end = datetime.fromisoformat(CHAT_WINDOW_END)
+    return start <= datetime.now(start.tzinfo) < end
+
+
+def get_chat_setting(db: Session) -> ChatSetting:
+    setting = db.query(ChatSetting).first()
+    if setting is None:
+        setting = ChatSetting(enabled=True)
+        db.add(setting)
+        db.commit()
+        db.refresh(setting)
+    return setting
+
+
+def set_chat_enabled(db: Session, enabled: bool) -> ChatSetting:
+    setting = get_chat_setting(db)
+    setting.enabled = enabled
+    db.commit()
+    db.refresh(setting)
+    return setting
+
+
+def serialize_chat_message(message: ChatMessage) -> dict:
+    created_at = message.created_at
+    if created_at.tzinfo is None:  # SQLite drops tzinfo; values are stored as UTC.
+        created_at = created_at.replace(tzinfo=timezone.utc)
+    return {
+        "id": message.id,
+        "name": message.name,
+        "body": message.body,
+        "created_at": created_at.isoformat(),
+    }
+
+
+def list_chat_messages(db: Session, after_id: int = 0) -> List[ChatMessage]:
+    query = db.query(ChatMessage)
+    if after_id > 0:
+        return query.filter(ChatMessage.id > after_id).order_by(ChatMessage.id.asc()).limit(CHAT_HISTORY_LIMIT).all()
+    latest = query.order_by(ChatMessage.id.desc()).limit(CHAT_HISTORY_LIMIT).all()
+    return list(reversed(latest))
+
+
+def create_chat_message(db: Session, name: str, body: str) -> ChatMessage:
+    cleaned_name = " ".join((name or "").split())
+    cleaned_body = (body or "").strip()
+    if not cleaned_name:
+        raise ValueError("Please enter a name")
+    if len(cleaned_name) > CHAT_NAME_MAX_LENGTH:
+        raise ValueError(f"Name must be {CHAT_NAME_MAX_LENGTH} characters or fewer")
+    if not cleaned_body:
+        raise ValueError("Message is empty")
+    if len(cleaned_body) > CHAT_BODY_MAX_LENGTH:
+        raise ValueError(f"Message must be {CHAT_BODY_MAX_LENGTH} characters or fewer")
+
+    message = ChatMessage(name=cleaned_name, body=cleaned_body, created_at=datetime.now(timezone.utc))
+    db.add(message)
+    db.commit()
+    db.refresh(message)
+    return message
+
+
+def delete_chat_message(db: Session, message_id: int) -> None:
+    message = db.query(ChatMessage).filter(ChatMessage.id == message_id).first()
+    if message is None:
+        raise ValueError("Message not found")
+    db.delete(message)
+    setting = get_chat_setting(db)
+    setting.version = (setting.version or 0) + 1
+    db.commit()

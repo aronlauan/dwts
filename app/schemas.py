@@ -38,3 +38,12 @@ class HighlightYoutubeCreate(BaseModel):
 class AdminLogin(BaseModel):
     username: str
     password: str
+
+
+class ChatMessageCreate(BaseModel):
+    name: str = Field(..., min_length=1)
+    body: str = Field(..., min_length=1)
+
+
+class ChatToggle(BaseModel):
+    enabled: bool

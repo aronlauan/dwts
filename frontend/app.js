@@ -386,6 +386,7 @@ async function loginAdmin(event) {
     const hostMessageForm = document.getElementById('host-message-form');
     if (hostMessageForm) hostMessageForm.classList.remove('hidden');
     await loadPairings();
+    await refreshChat({ fullReload: true }); // Re-render with delete buttons and load the admin toggle state.
   } catch (error) {
     updateStatus('admin-login-status', error.message, true);
     setAdminControlsVisible(false);
@@ -1055,6 +1056,336 @@ async function updateHighlight(event) {
   }
 }
 
+// ---- Live chat (finale night) ----
+const CHAT_NAME_STORAGE_KEY = 'dwts-chat-name';
+const CHAT_EXPANDED_STORAGE_KEY = 'dwts-chat-expanded';
+const CHAT_POLL_MS = 4000;
+const CHAT_POLL_HIDDEN_MS = 15000;
+const CHAT_POLL_CLOSED_MS = 20000;
+const CHAT_TEASER_LEAD_MS = 12 * 60 * 60 * 1000;
+
+const chat = {
+  lastId: 0,
+  version: null,
+  enabled: true,
+  open: false,
+  windowStart: null,
+  windowEnd: null,
+  timer: null,
+  inFlight: false,
+  expanded: false,
+  unread: 0,
+};
+
+try {
+  chat.expanded = window.localStorage.getItem(CHAT_EXPANDED_STORAGE_KEY) === '1';
+} catch (error) {
+  chat.expanded = false;
+}
+
+function renderChatUnread() {
+  const badge = document.getElementById('chat-unread');
+  if (!badge) return;
+  badge.textContent = chat.unread > 99 ? '99+' : String(chat.unread);
+  badge.classList.toggle('hidden', chat.unread === 0);
+}
+
+function setChatExpanded(expanded, { moveFocus = true } = {}) {
+  chat.expanded = expanded;
+  try {
+    window.localStorage.setItem(CHAT_EXPANDED_STORAGE_KEY, expanded ? '1' : '0');
+  } catch (error) {
+    // Ignore storage failures; the state just won't persist.
+  }
+  const launcher = document.getElementById('chat-launcher');
+  document.getElementById('chat-window')?.classList.toggle('hidden', !expanded);
+  launcher?.classList.toggle('hidden', expanded);
+  launcher?.setAttribute('aria-expanded', String(expanded));
+
+  if (expanded) {
+    chat.unread = 0;
+    renderChatUnread();
+    const list = document.getElementById('chat-messages');
+    if (list) list.scrollTop = list.scrollHeight;
+    const focusTarget = readChatName() ? 'chat-message-input' : 'chat-name-input';
+    if (moveFocus && chat.open && chat.enabled) document.getElementById(focusTarget)?.focus({ preventScroll: true });
+  } else if (moveFocus) {
+    launcher?.focus({ preventScroll: true });
+  }
+}
+
+function readChatName() {
+  try {
+    return window.localStorage.getItem(CHAT_NAME_STORAGE_KEY) || '';
+  } catch (error) {
+    return chat.sessionName || '';
+  }
+}
+
+function saveChatName(name) {
+  chat.sessionName = name;
+  try {
+    window.localStorage.setItem(CHAT_NAME_STORAGE_KEY, name);
+  } catch (error) {
+    // Private browsing can block localStorage; keep the name for this page load only.
+  }
+}
+
+function isChatAdmin() {
+  return Boolean(state.adminKey);
+}
+
+function formatChatTime(isoString) {
+  const date = new Date(isoString);
+  return date.toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' });
+}
+
+function buildChatMessageNode(message) {
+  const item = document.createElement('li');
+  item.className = 'chat-message';
+  item.dataset.id = String(message.id);
+  if (message.name === readChatName()) item.classList.add('mine');
+
+  const meta = document.createElement('div');
+  meta.className = 'chat-meta';
+  const name = document.createElement('strong');
+  name.textContent = message.name;
+  const time = document.createElement('span');
+  time.textContent = formatChatTime(message.created_at);
+  meta.append(name, time);
+
+  if (isChatAdmin()) {
+    const remove = document.createElement('button');
+    remove.type = 'button';
+    remove.className = 'chat-delete-btn';
+    remove.textContent = '×';
+    remove.title = 'Delete message';
+    remove.addEventListener('click', () => deleteChatMessage(message.id));
+    meta.append(remove);
+  }
+
+  const body = document.createElement('p');
+  body.textContent = message.body;
+  item.append(meta, body);
+  return item;
+}
+
+function appendChatMessages(messages, replace = false) {
+  const list = document.getElementById('chat-messages');
+  if (!list) return;
+  const nearBottom = list.scrollHeight - list.scrollTop - list.clientHeight < 80;
+  if (replace) list.replaceChildren();
+  messages.forEach((message) => {
+    if (list.querySelector(`[data-id="${message.id}"]`)) return;
+    list.append(buildChatMessageNode(message));
+    chat.lastId = Math.max(chat.lastId, message.id);
+    if (!replace && !chat.expanded && message.name !== readChatName()) chat.unread += 1;
+  });
+  renderChatUnread();
+  if (replace) chat.lastId = messages.reduce((max, message) => Math.max(max, message.id), 0);
+  if (replace || nearBottom) list.scrollTop = list.scrollHeight;
+}
+
+function renderChatForms() {
+  const name = readChatName();
+  document.getElementById('chat-name-form')?.classList.toggle('hidden', Boolean(name));
+  document.getElementById('chat-message-form')?.classList.toggle('hidden', !name);
+  document.getElementById('chat-identity')?.classList.toggle('hidden', !name);
+  const identityName = document.getElementById('chat-identity-name');
+  if (identityName) identityName.textContent = name;
+}
+
+function renderChatPanel() {
+  const panel = document.getElementById('live-chat');
+  const notice = document.getElementById('chat-notice');
+  const body = document.getElementById('chat-body');
+  if (!panel || !notice || !body) return;
+
+  const now = Date.now();
+  const start = chat.windowStart?.getTime() ?? 0;
+  const end = chat.windowEnd?.getTime() ?? 0;
+  const upcoming = now < start && start - now <= CHAT_TEASER_LEAD_MS;
+  const showPanel = chat.open || upcoming || (isChatAdmin() && now < end);
+
+  panel.classList.toggle('hidden', !showPanel);
+  if (!showPanel) return;
+
+  let noticeText = '';
+  if (!chat.open) {
+    const startLabel = chat.windowStart?.toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' });
+    noticeText = `Live chat opens at ${startLabel} tonight. Come back once the finale starts!`;
+  } else if (!chat.enabled) {
+    noticeText = 'The host has paused live chat for now.';
+  }
+  notice.textContent = noticeText;
+  notice.classList.toggle('hidden', !noticeText);
+  body.classList.toggle('hidden', !(chat.open && chat.enabled));
+  if (chat.open && chat.enabled) renderChatForms();
+}
+
+function renderChatAdmin() {
+  const stateText = document.getElementById('chat-admin-state');
+  const button = document.getElementById('chat-toggle-button');
+  if (!stateText || !button) return;
+  const windowLabel = chat.open ? 'Finale window is open.' : 'Outside the 8–11 PM ET window.';
+  stateText.textContent = `${chat.enabled ? 'Chat is ON.' : 'Chat is SHUT DOWN.'} ${windowLabel}`;
+  button.textContent = chat.enabled ? 'Shut down chat' : 'Reopen chat';
+  button.classList.toggle('primary-btn', !chat.enabled);
+  button.classList.toggle('secondary-btn', chat.enabled);
+  button.disabled = false;
+}
+
+function applyChatState(data, { fullReload = false } = {}) {
+  const wasActive = chat.open && chat.enabled;
+  chat.enabled = data.enabled;
+  chat.open = data.open;
+  chat.windowStart = new Date(data.window_start);
+  chat.windowEnd = new Date(data.window_end);
+  const isActive = chat.open && chat.enabled;
+
+  const versionChanged = chat.version !== null && chat.version !== data.version;
+  chat.version = data.version;
+
+  if (isActive) {
+    appendChatMessages(data.messages || [], fullReload || !wasActive);
+  } else {
+    chat.lastId = 0;
+  }
+
+  renderChatPanel();
+  renderChatAdmin();
+  return versionChanged;
+}
+
+function scheduleChatPoll() {
+  window.clearTimeout(chat.timer);
+  chat.timer = null;
+  const now = Date.now();
+  const start = chat.windowStart?.getTime() ?? 0;
+  const end = chat.windowEnd?.getTime() ?? 0;
+
+  let delay;
+  if (now >= end) {
+    renderChatPanel();
+    return; // Finale is over: stop polling entirely.
+  } else if (now < start) {
+    if (start - now > 24 * 60 * 60 * 1000) return;
+    delay = start - now + 1000; // Wake up right as the window opens.
+    renderChatPanel();
+  } else if (!chat.enabled) {
+    delay = CHAT_POLL_CLOSED_MS;
+  } else {
+    delay = document.hidden ? CHAT_POLL_HIDDEN_MS : CHAT_POLL_MS;
+  }
+  chat.timer = window.setTimeout(() => refreshChat(), delay);
+}
+
+async function refreshChat({ fullReload = false } = {}) {
+  if (chat.inFlight) return;
+  chat.inFlight = true;
+  try {
+    const after = fullReload || !(chat.open && chat.enabled) ? 0 : chat.lastId;
+    const data = await api(`/chat?after=${after}`);
+    const versionChanged = applyChatState(data, { fullReload });
+    if (versionChanged && !fullReload) {
+      chat.inFlight = false;
+      await refreshChat({ fullReload: true });
+      return;
+    }
+  } catch (error) {
+    console.error('Unable to load chat:', error);
+  } finally {
+    chat.inFlight = false;
+  }
+  scheduleChatPoll();
+}
+
+function joinChat(event) {
+  event.preventDefault();
+  const input = document.getElementById('chat-name-input');
+  const name = (input?.value || '').trim().replace(/\s+/g, ' ');
+  if (!name) {
+    updateStatus('chat-status', 'Please enter a name to join the chat.', true);
+    return;
+  }
+  saveChatName(name.slice(0, 30));
+  updateStatus('chat-status', '');
+  renderChatForms();
+  document.getElementById('chat-message-input')?.focus();
+}
+
+function changeChatName() {
+  const input = document.getElementById('chat-name-input');
+  if (input) input.value = readChatName();
+  document.getElementById('chat-name-form')?.classList.remove('hidden');
+  document.getElementById('chat-message-form')?.classList.add('hidden');
+  input?.focus();
+}
+
+async function sendChatMessage(event) {
+  event.preventDefault();
+  const input = document.getElementById('chat-message-input');
+  const body = (input?.value || '').trim();
+  const name = readChatName();
+  if (!body || !name) return;
+
+  const button = event.submitter || event.target.querySelector('button');
+  if (button) button.disabled = true;
+  try {
+    const message = await api('/chat', {
+      method: 'POST',
+      body: JSON.stringify({ name, body }),
+    });
+    input.value = '';
+    updateStatus('chat-status', '');
+    appendChatMessages([message]);
+    document.getElementById('chat-messages')?.scrollTo({ top: 1e9 });
+  } catch (error) {
+    updateStatus('chat-status', error.message, true);
+  } finally {
+    if (button) button.disabled = false;
+    input?.focus();
+  }
+}
+
+async function deleteChatMessage(messageId) {
+  if (!window.confirm('Delete this message for everyone?')) return;
+  try {
+    await api(`/chat/${messageId}`, {
+      method: 'DELETE',
+      headers: { 'X-Admin-Key': state.adminKey || ADMIN_KEY },
+    });
+    document.querySelector(`#chat-messages [data-id="${messageId}"]`)?.remove();
+  } catch (error) {
+    updateStatus('chat-status', error.message, true);
+  }
+}
+
+async function toggleChat() {
+  const button = document.getElementById('chat-toggle-button');
+  const enabling = !chat.enabled;
+  if (!enabling && !window.confirm('Shut down live chat for everyone?')) return;
+  if (button) button.disabled = true;
+  try {
+    const data = await api('/admin/chat', {
+      method: 'POST',
+      headers: { 'X-Admin-Key': state.adminKey || ADMIN_KEY },
+      body: JSON.stringify({ enabled: enabling }),
+    });
+    applyChatState(data);
+    if (enabling) await refreshChat({ fullReload: true });
+    updateStatus('chat-admin-status', enabling ? 'Live chat reopened.' : 'Live chat shut down.');
+  } catch (error) {
+    updateStatus('chat-admin-status', error.message, true);
+    renderChatAdmin();
+  }
+}
+
+document.addEventListener('visibilitychange', () => {
+  // Poll immediately when someone comes back to the tab.
+  if (!document.hidden && chat.open && chat.enabled) refreshChat();
+});
+
 async function init() {
   try {
     await loadHostMessage();
@@ -1065,6 +1396,7 @@ async function init() {
     await loadPairings();
     await refreshLeaderboard();
     startCountdown();
+    refreshChat();
   } catch (error) {
     updateStatus('pick-status', error.message, true);
   }
@@ -1079,6 +1411,16 @@ document.getElementById('admin-login-form')?.addEventListener('submit', loginAdm
 document.getElementById('host-message-form')?.addEventListener('submit', updateHostMessage);
 document.getElementById('elimination-form')?.addEventListener('submit', recordElimination);
 document.getElementById('highlight-form')?.addEventListener('submit', updateHighlight);
+document.getElementById('chat-name-form')?.addEventListener('submit', joinChat);
+document.getElementById('chat-message-form')?.addEventListener('submit', sendChatMessage);
+document.getElementById('chat-change-name')?.addEventListener('click', changeChatName);
+document.getElementById('chat-toggle-button')?.addEventListener('click', toggleChat);
+document.getElementById('chat-launcher')?.addEventListener('click', () => setChatExpanded(true));
+document.getElementById('chat-minimize')?.addEventListener('click', () => setChatExpanded(false));
+document.addEventListener('keydown', (event) => {
+  if (event.key === 'Escape' && chat.expanded) setChatExpanded(false);
+});
+setChatExpanded(chat.expanded, { moveFocus: false });
 document.getElementById('highlight-type-image')?.addEventListener('change', toggleHighlightFields);
 document.getElementById('highlight-type-youtube')?.addEventListener('change', toggleHighlightFields);
 selectionNameSelect?.addEventListener('change', async () => {

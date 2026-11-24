@@ -1,4 +1,4 @@
-from sqlalchemy import Column, ForeignKey, Index, Integer, LargeBinary, String, UniqueConstraint
+from sqlalchemy import Boolean, Column, DateTime, ForeignKey, Index, Integer, LargeBinary, String, UniqueConstraint
 from sqlalchemy.orm import relationship
 
 from app.db import Base
@@ -32,6 +32,24 @@ class SiteMessage(Base):
 
     id = Column(Integer, primary_key=True, index=True)
     message = Column(String, nullable=False, default="Welcome to DWTS Picks!")
+
+
+class ChatSetting(Base):
+    __tablename__ = "chat_settings"
+
+    id = Column(Integer, primary_key=True, index=True)
+    enabled = Column(Boolean, nullable=False, default=True)
+    # Bumped whenever a message is deleted so polling clients know to reload history.
+    version = Column(Integer, nullable=False, default=0)
+
+
+class ChatMessage(Base):
+    __tablename__ = "chat_messages"
+
+    id = Column(Integer, primary_key=True, index=True)
+    name = Column(String, nullable=False)
+    body = Column(String, nullable=False)
+    created_at = Column(DateTime(timezone=True), nullable=False)
 
 
 class Highlight(Base):
