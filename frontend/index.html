@@ -7,15 +7,15 @@
     <link rel="icon" type="image/svg+xml" href="favicon.svg?v=1" />
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
-    <link rel="stylesheet" href="styles.css?v=20260915-10" />
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Playfair+Display:ital,wght@0,500;0,600;1,500&display=swap" rel="stylesheet" />
+    <link rel="stylesheet" href="styles.css?v=20261124-5" />
   </head>
   <body>
     <div class="page-shell">
       <header class="topbar">
         <div>
-          <p class="eyebrow">Season 2026</p>
-          <h1>Emma's DWTS Picks Leaderboard 💃🏼</h1>
+          <p class="eyebrow">2026</p>
+          <h1>💃🏼 FINALE NIGHT 💃🏼</h1>
         </div>
         <nav class="nav">
           <a href="#leaderboard">Leaderboard</a>
@@ -105,6 +105,20 @@
             <div id="hero-highlight" class="hero-highlight">
               <img id="hero-highlight-image" src="dwts.webp" alt="Highlight from the last episode" />
             </div>
+          </div>
+        </section>
+
+        <section id="winners-circle" class="card winners-circle hidden" aria-labelledby="winners-circle-title">
+          <div class="stage-header">
+            <p class="stage-eyebrow">The season finale</p>
+            <h3 id="winners-circle-title">Winner's Circle</h3>
+            <p id="winners-circle-champion" class="stage-champion"></p>
+          </div>
+          <div id="winners-podium" class="winners-podium" aria-label="Top three players"></div>
+          <div id="winners-runners-up-block" class="dance-floor hidden">
+            <div class="dance-floor-surface" aria-hidden="true"></div>
+            <p class="dance-floor-label">Runners-up</p>
+            <div id="winners-runners-up" class="dance-floor-rows" aria-label="Places 4 through 10"></div>
           </div>
         </section>
 
@@ -391,12 +405,58 @@
               <button class="primary-btn" type="submit">Save highlight</button>
             </form>
             <div id="highlight-status" class="status-text"></div>
+
+            <div class="stacked-form chat-admin">
+              <p>Live chat</p>
+              <p id="chat-admin-state" class="status-text">Checking chat status...</p>
+              <button id="chat-toggle-button" class="secondary-btn" type="button" disabled>Shut down chat</button>
+              <div id="chat-admin-status" class="status-text"></div>
+            </div>
           </div>
         </section>
 
       </main>
     </div>
 
-    <script src="app.js?v=20261027-1"></script>
+    <div id="live-chat" class="chat-overlay hidden">
+      <button id="chat-launcher" class="chat-launcher" type="button" aria-controls="chat-window" aria-expanded="false">
+        <span aria-hidden="true">💬</span> Live chat
+        <span id="chat-unread" class="chat-unread hidden" aria-label="unread messages">0</span>
+      </button>
+
+      <section id="chat-window" class="chat-window card hidden" role="dialog" aria-labelledby="live-chat-title">
+        <header class="chat-window-header">
+          <div>
+            <p class="eyebrow accent">Finale night · 8–11 PM ET</p>
+            <h3 id="live-chat-title">Live chat 💬</h3>
+          </div>
+          <button id="chat-minimize" class="chat-icon-btn" type="button" aria-label="Minimize chat" title="Minimize (Esc)">–</button>
+        </header>
+
+        <p id="chat-identity" class="chat-identity hidden">
+          Chatting as <strong id="chat-identity-name"></strong>
+          <button id="chat-change-name" class="chat-link-btn" type="button">change</button>
+        </p>
+
+        <p id="chat-notice" class="chat-notice hidden"></p>
+
+        <div id="chat-body" class="chat-body hidden">
+          <ol id="chat-messages" class="chat-messages" aria-live="polite"></ol>
+
+          <form id="chat-name-form" class="chat-form hidden">
+            <input id="chat-name-input" type="text" maxlength="30" placeholder="Your name for the chat" autocomplete="nickname" />
+            <button class="primary-btn" type="submit">Join</button>
+          </form>
+
+          <form id="chat-message-form" class="chat-form hidden">
+            <input id="chat-message-input" type="text" maxlength="300" placeholder="Say something..." autocomplete="off" />
+            <button class="primary-btn" type="submit">Send</button>
+          </form>
+          <div id="chat-status" class="status-text"></div>
+        </div>
+      </section>
+    </div>
+
+    <script src="app.js?v=20261124-4"></script>
   </body>
 </html>

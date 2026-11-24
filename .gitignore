@@ -246,3 +246,6 @@ coverage/
 htmlcov/
 .dist/
 .build/
+
+# Agentic workflow
+CLAUDE.md

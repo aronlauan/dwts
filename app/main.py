@@ -1,4 +1,6 @@
-from fastapi import Depends, FastAPI, File, Header, HTTPException, UploadFile
+import time
+
+from fastapi import Depends, FastAPI, File, Header, HTTPException, Request, UploadFile
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import FileResponse, Response
 from fastapi.staticfiles import StaticFiles
@@ -7,9 +9,18 @@ from sqlalchemy.orm import Session
 from app.config import ADMIN_KEY, ALLOWED_HIGHLIGHT_IMAGE_TYPES, FRONTEND_DIR, MAX_HIGHLIGHT_IMAGE_BYTES, UPLOADS_DIR
 from app.db import Base, ensure_database_schema, engine, get_db
 from app.models import Pairing, PickSheet, Season
-from app.schemas import AdminLogin, EliminationCreate, HighlightYoutubeCreate, PairingCreate, PickSubmission, SeasonCreate, SiteMessageCreate, UserCreate
+from app.schemas import AdminLogin, ChatMessageCreate, ChatToggle, EliminationCreate, HighlightYoutubeCreate, PairingCreate, PickSubmission, SeasonCreate, SiteMessageCreate, UserCreate
 from app.services import (
+    CHAT_WINDOW_END,
+    CHAT_WINDOW_START,
     authenticate_admin,
+    create_chat_message,
+    delete_chat_message,
+    get_chat_setting,
+    is_chat_window_open,
+    list_chat_messages,
+    serialize_chat_message,
+    set_chat_enabled,
     build_leaderboard,
     create_pick_sheet,
     create_user,
@@ -239,6 +250,74 @@ def get_eliminations(season_id: int, db: Session = Depends(get_db)):
     except ValueError as exc:
         raise HTTPException(status_code=404, detail=str(exc)) from exc
     return eliminations
+
+
+CHAT_POST_COOLDOWN_SECONDS = 2.0
+_last_chat_post_by_client: dict[str, float] = {}
+
+
+def _client_id(request: Request) -> str:
+    # Render sits behind a proxy, so the real client IP is the first X-Forwarded-For entry.
+    forwarded = request.headers.get("x-forwarded-for")
+    if forwarded:
+        return forwarded.split(",")[0].strip()
+    return request.client.host if request.client else "unknown"
+
+
+def _chat_state(db: Session, after: int = 0) -> dict:
+    setting = get_chat_setting(db)
+    is_open = is_chat_window_open()
+    messages = []
+    if is_open and setting.enabled:
+        messages = [serialize_chat_message(message) for message in list_chat_messages(db, after)]
+    return {
+        "enabled": setting.enabled,
+        "open": is_open,
+        "window_start": CHAT_WINDOW_START,
+        "window_end": CHAT_WINDOW_END,
+        "version": setting.version or 0,
+        "messages": messages,
+    }
+
+
+@app.get("/chat")
+def get_chat(after: int = 0, db: Session = Depends(get_db)):
+    return _chat_state(db, after)
+
+
+@app.post("/chat")
+def post_chat(payload: ChatMessageCreate, request: Request, db: Session = Depends(get_db)):
+    if not is_chat_window_open():
+        raise HTTPException(status_code=403, detail="Live chat is only open during the finale (8-11 PM ET).")
+    if not get_chat_setting(db).enabled:
+        raise HTTPException(status_code=403, detail="Live chat has been closed by the host.")
+
+    client = _client_id(request)
+    now = time.monotonic()
+    if now - _last_chat_post_by_client.get(client, 0.0) < CHAT_POST_COOLDOWN_SECONDS:
+        raise HTTPException(status_code=429, detail="Slow down a little! Try again in a moment.")
+
+    try:
+        message = create_chat_message(db, payload.name, payload.body)
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
+    _last_chat_post_by_client[client] = now
+    return serialize_chat_message(message)
+
+
+@app.post("/admin/chat")
+def toggle_chat(payload: ChatToggle, db: Session = Depends(get_db), _: str = Depends(require_admin)):
+    set_chat_enabled(db, payload.enabled)
+    return _chat_state(db)
+
+
+@app.delete("/chat/{message_id}")
+def remove_chat_message(message_id: int, db: Session = Depends(get_db), _: str = Depends(require_admin)):
+    try:
+        delete_chat_message(db, message_id)
+    except ValueError as exc:
+        raise HTTPException(status_code=404, detail=str(exc)) from exc
+    return {"deleted": message_id}
 
 
 app.mount("/uploads", StaticFiles(directory=str(UPLOADS_DIR), html=False), name="uploads")
